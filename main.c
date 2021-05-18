@@ -1,7 +1,9 @@
 #include <errno.h>
-#include "defs.h"
-#include "decl.h"
 #include "data.h"
+#include "defs.h"
+#include "expr.h"
+#include "scan.h"
+#include "interp.h"
 
 int Line;
 int Putback;
@@ -20,18 +22,11 @@ static void usage(char *prog) {
   exit(1);
 }
 
-static void scanfile() {
-  struct token T;
-  while (scan(&T)) {
-    printf("Token %s", tokstr[T.token]);
-    if (T.token == T_INTLIT) {
-      printf(", value %d", T.intvalue);
-    }
-    printf("\n");
-  }
-}
-
 int main(int argc, char* argv[]) {
+  struct ASTnode *n;
+
+  // Print help message with proper way to call
+  // this program and exit.
   if (argc != 2) usage(argv[0]); 
 
   init();
@@ -41,7 +36,9 @@ int main(int argc, char* argv[]) {
     exit(1);
   }
 
-  scanfile();
+  scan(&Token);
+  n = binexpr();
+  printf("%d\n", interpretAST(n));
 
   exit(0);
 }

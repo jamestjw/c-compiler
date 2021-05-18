@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "defs.h"
-#include "decl.h"
 #include "data.h"
+#include "scan.h"
 
 // Get the next char from the input file.
 static int next(void) {
@@ -84,6 +84,7 @@ int scan(struct token *t) {
   // Set up the token based on the input character
   switch (c) {
     case EOF:
+      t->token = T_EOF;
       return 0;
     case '+':
       t->token = T_PLUS;
