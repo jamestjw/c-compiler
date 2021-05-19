@@ -39,6 +39,65 @@ static struct ASTnode *primary(void) {
   }
 }
 
+struct ASTnode *multiplicative_expr(void) {
+  struct ASTnode *left, *right;
+  int tokentype;
+
+  // Get integer literal on the left
+  left = primary();
+
+  tokentype = Token.token;
+  // Return the left node if no tokens are left
+  if (tokentype == T_EOF) return left;
+
+  // While we encounter the '*' or '/' operators
+  while ((tokentype == T_STAR || tokentype == T_SLASH)) {
+    // Fetch next integer literal
+    scan(&Token);
+    right = primary();
+
+    left = mkastnode(arithop(tokentype), left, right, 0);
+
+    tokentype = Token.token;
+    if (tokentype == T_EOF) break;
+  }
+
+  return left;
+}
+
+// Return an AST tree node whose root is a '+' or '-' binary operator
+struct ASTnode *additive_expr(void) {
+  struct ASTnode *left, *right;
+  int tokentype;
+
+  // Get left sub-tree at a higher precedence than us.
+  // This function only returns when it encounters an
+  // operator with lower precedence than itself,
+  // i.e. a '+' or '-'
+  left = multiplicative_expr();
+  
+  tokentype = Token.token;
+  // If no tokens left, return the node as the expression
+  // If a token was found, we know we have a '+' or '-'
+  if (tokentype == T_EOF) return left;
+
+  while (1) {
+    scan(&Token);
+
+    // Get the right sub-tree at higher precedence than us
+    // in case there operators with higher precedence ahead of
+    // where we are now.
+    right = multiplicative_expr();
+
+    left = mkastnode(arithop(tokentype), left, right, 0);
+
+    tokentype = Token.token;
+    if (tokentype == T_EOF) break;
+  }
+
+  return left;
+}
+
 struct ASTnode *binexpr(void) {
   struct ASTnode *n, *left, *right;
   int nodetype;
