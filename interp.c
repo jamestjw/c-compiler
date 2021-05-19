@@ -31,9 +31,9 @@ int interpretAST(struct ASTnode *n) {
       return (leftval * rightval);
     case A_DIVIDE:
       return (leftval / rightval);
-     case A_INTLIT:
+    case A_INTLIT:
       return n->intvalue;
-     default:
+    default:
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);
   }

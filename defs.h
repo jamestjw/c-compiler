@@ -11,6 +11,7 @@ struct token {
 
 // Token types
 enum {
+  T_EOF,
   T_PLUS, 
   T_MINUS, 
   T_STAR, 
@@ -19,7 +20,6 @@ enum {
   // the value will be held in the +intvalue+ field
   // of the token.
   T_INTLIT,
-  T_EOF,
 };
 
 // AST node types

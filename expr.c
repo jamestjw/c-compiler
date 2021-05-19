@@ -7,6 +7,17 @@
 // Contains most recently scanned token from input
 struct token Token;
 
+// Operator precedence for each token
+// A bigger number indicates a higher precedence
+static int OpPrec[] = {
+  0,  // EOF
+  10, // +
+  10, // -
+  20, // *
+  20, // /
+  0,  // INTLIT
+};
+
 // Convert a token type into an AST operation (AST node type)
 int arithop(int tok) {
   switch (tok) {
@@ -24,6 +35,22 @@ int arithop(int tok) {
   }
 }
 
+// Check that we have a binary operator and return
+// its precedence.
+// This function serves to enforce valid syntax, when
+// we ask for a token's precedence, we expect the token
+// to be some operator, this function throws an error when
+// that expectation is not met.
+static int op_precedence(int tokentype) {
+  int prec = OpPrec[tokentype];
+  if (prec == 0) {
+    fprintf(stderr, "syntax error on line %d token %d\n", Line, tokentype);
+    exit(1);
+  }
+
+  return prec;
+}
+
 // Parse a primary factor and return a node representing it
 static struct ASTnode *primary(void) {
   struct ASTnode *n;
@@ -39,24 +66,37 @@ static struct ASTnode *primary(void) {
   }
 }
 
-struct ASTnode *binexpr(void) {
-  struct ASTnode *n, *left, *right;
-  int nodetype;
+// Return a AST node whose root is a binary operator
+// Parameter ptp is the precedence of the previous token
+struct ASTnode *binexpr(int ptp) {
+  struct ASTnode *left, *right;
+  int tokentype;
 
   // Build the left node using an integer literal
   left = primary();
 
+  tokentype = Token.token;
   // If no tokens are left, return the left node
-  if (Token.token == T_EOF) return left;
-  
-  // Convert operator token to node type
-  nodetype = arithop(Token.token);
+  if (tokentype == T_EOF) return left;
 
-  scan(&Token);
+  // While the current token's precedence is
+  // higher than that of the previous token
+  while(op_precedence(tokentype) > ptp) {
+    scan(&Token);
 
-  right = binexpr();
+    // Recursively call this function to build a
+    // subtree while passing in the precedence of the
+    // current token
+    right = binexpr(OpPrec[tokentype]);
 
-  n = mkastnode(nodetype, left, right, 0);
+    // Join that subtree with the left node
+    left  = mkastnode(arithop(tokentype), left, right, 0);
 
-  return n;
+    tokentype = Token.token;
+    if (tokentype == T_EOF) return left;
+  }
+
+  // When the next operator has a precedence equal or lower,
+  // we return the tree
+  return left;
 }
