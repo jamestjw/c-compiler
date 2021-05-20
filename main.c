@@ -2,12 +2,14 @@
 #include "data.h"
 #include "defs.h"
 #include "expr.h"
+#include "gen.h"
 #include "scan.h"
 #include "interp.h"
 
 int Line;
 int Putback;
 FILE *Infile;
+FILE *Outfile;
 
 // String version of tokens to be used for debugging purposes.
 char *tokstr[] = { "+", "-", "*", "/", "intlit" };
@@ -31,14 +33,21 @@ int main(int argc, char* argv[]) {
 
   init();
 
-  if((Infile = fopen(argv[1], "r")) == NULL) {
+  if ((Infile = fopen(argv[1], "r")) == NULL) {
     fprintf(stderr, "Unable to open %s: %s\n", argv[1], strerror(errno));
+    exit(1);
+  }
+
+  if ((Outfile = fopen("out.s", "w")) == NULL) {
+    fprintf(stderr, "Unable to open out.s: %s\n", strerror(errno));
     exit(1);
   }
 
   scan(&Token);
   n = binexpr(0);
   printf("%d\n", interpretAST(n));
+  generatecode(n);
 
+  fclose(Outfile);
   exit(0);
 }
