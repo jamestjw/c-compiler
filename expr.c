@@ -76,8 +76,8 @@ struct ASTnode *binexpr(int ptp) {
   left = primary();
 
   tokentype = Token.token;
-  // If no tokens are left, return the left node
-  if (tokentype == T_EOF) return left;
+  // If we hit a semi colon, return the left node
+  if (tokentype == T_SEMI) return left;
 
   // While the current token's precedence is
   // higher than that of the previous token
@@ -93,7 +93,7 @@ struct ASTnode *binexpr(int ptp) {
     left  = mkastnode(arithop(tokentype), left, right, 0);
 
     tokentype = Token.token;
-    if (tokentype == T_EOF) return left;
+    if (tokentype == T_SEMI) return left;
   }
 
   // When the next operator has a precedence equal or lower,

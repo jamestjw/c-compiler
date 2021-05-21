@@ -4,6 +4,7 @@
 #include "expr.h"
 #include "gen.h"
 #include "scan.h"
+#include "stmt.h"
 #include "interp.h"
 
 int Line;
@@ -44,10 +45,9 @@ int main(int argc, char* argv[]) {
   }
 
   scan(&Token);
-  n = binexpr(0);
-  printf("%d\n", interpretAST(n));
-  generatecode(n);
-
+  genpreamble();
+  statements();
+  genpostamble();
   fclose(Outfile);
   exit(0);
 }

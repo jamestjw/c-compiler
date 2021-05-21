@@ -5,6 +5,8 @@
 #include "data.h"
 #include "scan.h"
 
+char Text[TEXTLEN + 1];
+
 // Get the next char from the input file.
 static int next(void) {
   int c;
@@ -75,8 +77,54 @@ static int scanint(int c) {
   return val;
 }
 
+// Scan an identifier from the input file and store it
+// in buf[] and return its length
+//
+// c - First letter of identifier
+// buf - Buffer to store resulting identifier
+// lim - Max identifier length
+static int scanident(int c, char *buf, int lim) {
+  int i = 0;
+
+  // Identifiers contain letters, digits and underscores only
+  while (isalpha(c) || isdigit(c) || c == '_') {
+    if (lim - 1 == i) {
+      printf("identifier too long on line %d\n", Line);
+      exit(1);
+    } else if (i < lim - 1) {
+      buf[i++] = c;
+    }
+    c = next();
+  }
+
+  // The while loop terminates when we hit an invalid character,
+  // which we put back
+  putback(c);
+
+  // NULL terminate the string
+  buf[i] = '\0';
+  return i;
+}
+
+// Given a word, returns the matching keyword token number
+// or 0 if it is not a keyword.
+//
+// This implementation switches on the first char to save
+// time calling strcmp against all keywords.
+static int keyword(char *s) {
+  switch (*s) {
+    case 'p':
+      if (!strcmp(s, "print")) 
+        return T_PRINT;
+      break;
+  }
+
+  // Return 0 if no keywords were identified
+  return 0;
+}
+
 int scan(struct token *t) {
-  int c;
+  int c, tokentype;
   
   // Skip whitespace
   c = skip();
@@ -98,6 +146,9 @@ int scan(struct token *t) {
     case '/':
       t->token = T_SLASH;
       break;
+    case ';':
+      t->token = T_SEMI;
+      break;
     default:
       // If a digit was encountered, scan the entire number
       // in and store it in the token.
@@ -105,6 +156,17 @@ int scan(struct token *t) {
         t->intvalue = scanint(c);
         t->token = T_INTLIT;
         break;
+      } else if (isalpha(c) || c == '-') {
+        // Read in keyword or identifier
+        scanident(c, Text, TEXTLEN);
+
+        if ((tokentype = keyword(Text))) {
+          t->token = tokentype;
+          break;
+        }
+
+        printf("Unrecognised symbol %s on line %d\n", Text, Line);
+        exit(1);
       }
 
       printf("Unrecognised character %c on line %d\n", c, Line);

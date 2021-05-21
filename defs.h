@@ -20,6 +20,8 @@ enum {
   // the value will be held in the +intvalue+ field
   // of the token.
   T_INTLIT,
+  T_SEMI,
+  T_PRINT
 };
 
 // AST node types

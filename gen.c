@@ -7,7 +7,7 @@
 // Given an AST node, recursively generate assembly
 // code for it. Returns the identifier of the register
 // that contains the results of evaluating this node.
-static int genAST(struct ASTnode *n) {
+int genAST(struct ASTnode *n) {
   // Registers containing the results of evaluating
   // the left and right child nodes
   int leftreg, rightreg;
@@ -31,6 +31,11 @@ static int genAST(struct ASTnode *n) {
       exit(1);
   }
 }
+
+void genpreamble()        { cgpreamble(); }
+void genpostamble()       { cgpostamble(); }
+void genfreeregs()        { freeall_registers(); }
+void genprintint(int reg) { cgprintint(reg); }
 
 void generatecode(struct ASTnode *n) {
   int reg;
