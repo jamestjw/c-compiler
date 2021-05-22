@@ -1,7 +1,8 @@
-#include "defs.h"
 #include "data.h"
 #include "expr.h"
+#include "misc.h"
 #include "scan.h"
+#include "sym.h"
 #include "tree.h"
 
 // Contains most recently scanned token from input
@@ -54,16 +55,24 @@ static int op_precedence(int tokentype) {
 // Parse a primary factor and return a node representing it
 static struct ASTnode *primary(void) {
   struct ASTnode *n;
+  int id;
 
   switch (Token.token) {
     case T_INTLIT:
       n = mkastleaf(A_INTLIT, Token.intvalue);
-      scan(&Token);
-      return n;
+      break;
+    case T_IDENT:
+      id = findglob(Text);
+      if (id == -1)
+        fatals("Unknown variable", Text);
+      n = mkastleaf(A_IDENT, id);
+      break;
     default:
-      fprintf(stderr, "syntax error on line %d, expected an integer literal\n", Line);
-      exit(1);
+      fatald("Syntax error, token", Token.token);
   }
+  
+  scan(&Token);
+  return n;
 }
 
 // Return a AST node whose root is a binary operator

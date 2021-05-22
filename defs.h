@@ -16,17 +16,20 @@ enum {
   T_MINUS, 
   T_STAR, 
   T_SLASH,
-  // Represents an integer literal, in which case 
-  // the value will be held in the +intvalue+ field
-  // of the token.
-  T_INTLIT,
+  T_INTLIT, // Int literal
   T_SEMI,
-  T_PRINT
+  T_EQUALS,
+  T_IDENT,
+
+  // Keywords
+  T_PRINT,
+  T_INT
 };
 
 // AST node types
 enum {
-  A_ADD, A_SUBTRACT, A_MULTIPLY, A_DIVIDE, A_INTLIT
+  A_ADD, A_SUBTRACT, A_MULTIPLY, A_DIVIDE, A_INTLIT,
+  A_IDENT, A_LVIDENT, A_ASSIGN
 };
 
 // AST structure
@@ -34,6 +37,13 @@ struct ASTnode {
   int op;                   // "Operation" to be performed on the tree
   struct ASTnode *left;     // Left and right child trees
   struct ASTnode *right;
-  int intvalue;             // Value for A_INTLIT
+  union {
+    int intvalue; // Integer value for A_INTLIT
+    int id;       // Symbol slot number for A_IDENT
+  } v;
 };
 
+// Symbol table entry
+struct symtable {
+  char *name; // Name of a symbol
+};

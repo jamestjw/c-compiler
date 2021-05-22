@@ -1,6 +1,5 @@
 #include <errno.h>
 #include "data.h"
-#include "defs.h"
 #include "expr.h"
 #include "gen.h"
 #include "scan.h"

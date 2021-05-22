@@ -1,8 +1,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include "defs.h"
 #include "data.h"
+#include "misc.h"
 #include "scan.h"
 
 char Text[TEXTLEN + 1];
@@ -117,6 +117,10 @@ static int keyword(char *s) {
       if (!strcmp(s, "print")) 
         return T_PRINT;
       break;
+    case 'i':
+      if (!strcmp(s, "int"))
+        return T_INT;
+      break;
   }
 
   // Return 0 if no keywords were identified
@@ -149,6 +153,9 @@ int scan(struct token *t) {
     case ';':
       t->token = T_SEMI;
       break;
+    case '=':
+      t->token = T_EQUALS;
+      break;
     default:
       // If a digit was encountered, scan the entire number
       // in and store it in the token.
@@ -156,7 +163,7 @@ int scan(struct token *t) {
         t->intvalue = scanint(c);
         t->token = T_INTLIT;
         break;
-      } else if (isalpha(c) || c == '-') {
+      } else if (isalpha(c) || c == '_') {
         // Read in keyword or identifier
         scanident(c, Text, TEXTLEN);
 
@@ -165,12 +172,13 @@ int scan(struct token *t) {
           break;
         }
 
-        printf("Unrecognised symbol %s on line %d\n", Text, Line);
-        exit(1);
+        // If it is not a recognised keyword, we assume
+        // it is an identifier
+        t->token = T_IDENT;
+        break;
       }
 
-      printf("Unrecognised character %c on line %d\n", c, Line);
-      exit(1);
+      fatalc("Unrecognised character", c);
   }
 
   return 1;

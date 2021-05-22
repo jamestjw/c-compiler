@@ -74,8 +74,8 @@ void cgpostamble() {
       );
 }
 
-// Allocates a register and loads a literal into it.
-int cgload(int value) {
+// Allocates a register and loads an integer literal into it.
+int cgloadint(int value) {
   int r = alloc_register();
 
   // e.g. movq 10, %r10
@@ -147,3 +147,22 @@ void cgprintint(int r) {
   free_register(r);
 }
 
+int cgloadglob(char *identifier) {
+  int r = alloc_register();
+
+  // e.g. movq identifier(%rip), %r10
+  fprintf(Outfile, "\tmovq\t%s(\%%rip), %s\n", identifier, reglist[r]);
+  return r;
+}
+
+int cgstorglob(int r, char *identifier) {
+  // e.g. movq %r10, identifier(%rip)
+  fprintf(Outfile, "\tmovq\t%s, %s(\%%rip)\n", reglist[r], identifier);
+
+  return r;
+}
+
+void cgglobsym(char *sym) {
+  // e.g. .comm sym,8,8
+  fprintf(Outfile, "\t.comm\t%s,8,8\n", sym);
+}

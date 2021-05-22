@@ -1,19 +1,23 @@
 // Generic assembly code generator
 
 #include "cg.h"
-#include "defs.h"
+#include "data.h"
 #include "gen.h"
 
 // Given an AST node, recursively generate assembly
 // code for it. Returns the identifier of the register
 // that contains the results of evaluating this node.
-int genAST(struct ASTnode *n) {
+//
+// reg - Since we evaluate the left child before the right
+//       child, this allows us to pass results from the evaluation
+//       of the left child to aid the evaluation of the right child.
+int genAST(struct ASTnode *n, int reg) {
   // Registers containing the results of evaluating
   // the left and right child nodes
   int leftreg, rightreg;
 
-  if (n->left) leftreg = genAST(n->left);
-  if (n->right) rightreg = genAST(n->right);
+  if (n->left) leftreg = genAST(n->left, -1);
+  if (n->right) rightreg = genAST(n->right, leftreg);
 
   switch (n->op) {
     case A_ADD:
@@ -25,7 +29,15 @@ int genAST(struct ASTnode *n) {
     case A_DIVIDE:
       return cgdiv(leftreg, rightreg);
     case A_INTLIT:
-      return cgload(n->intvalue);
+      return cgloadint(n->v.intvalue);
+    case A_IDENT:
+      return cgloadglob(Gsym[n->v.id].name);
+    case A_LVIDENT:
+      return cgstorglob(reg, Gsym[n->v.id].name);
+    case A_ASSIGN:
+      // Assignation should have been completed at the
+      // A_LVIDENT node
+      return rightreg;
     default:
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);
@@ -42,10 +54,12 @@ void generatecode(struct ASTnode *n) {
 
   // Handle preamble (leading code)
   cgpreamble();
-  reg = genAST(n);
+  reg = genAST(n, -1);
   // Print final result
   cgprintint(reg);
 
   // Handle postamble (trailing code)
   cgpostamble();
 }
+
+void genglobsym(char *s) { cgglobsym(s); }
