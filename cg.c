@@ -5,6 +5,8 @@
 
 // List of generic registers that the code will work on
 static char *reglist[4] = { "%r8", "%r9", "%r10", "%r11" };
+// Lower 8 bits of registers in reglist
+static char *breglist[4] = { "%r8b", "%r9b", "%r10b", "%r11b" }; 
 // List of available registers
 static int freereg[4];
 
@@ -166,3 +168,28 @@ void cgglobsym(char *sym) {
   // e.g. .comm sym,8,8
   fprintf(Outfile, "\t.comm\t%s,8,8\n", sym);
 }
+
+// Compare two registers
+static int cgcompare(int r1, int r2, char *how) {
+  // cmpq %r2, %r1
+  // This calculates %r1 - %r2
+  fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
+  // setge %r10b
+  // This only sets the lowest byte of the register
+  // Note: These instructions only works on 8-bit registers
+  fprintf(Outfile, "\t%s\t%s\n", how, breglist[r2]);
+  // andq $255, %r2
+  // Zero-ing out the bits above the first byte
+  fprintf(Outfile, "\tandq\t$255, %s\n", reglist[r2]);
+
+  free_register(r1);
+  return r2;
+}
+
+int cgequal(int r1, int r2) { return(cgcompare(r1, r2, "sete")); }
+int cgnotequal(int r1, int r2) { return(cgcompare(r1, r2, "setne")); }
+int cglessthan(int r1, int r2) { return(cgcompare(r1, r2, "setl")); }
+int cggreaterthan(int r1, int r2) { return(cgcompare(r1, r2, "setg")); }
+int cglessequal(int r1, int r2) { return(cgcompare(r1, r2, "setle")); }
+int cggreaterequal(int r1, int r2) { return(cgcompare(r1, r2, "setge")); }
+

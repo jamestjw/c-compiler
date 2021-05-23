@@ -10,6 +10,17 @@ int cgdiv(int r1, int r2);
 int cgloadglob(char *identifier);
 // Load a value to a global symbol
 int cgstorglob(int r, char *identifier);
+
+// Compare values in two registers, sets the
+// register that contains the result to 1
+// if the comparison is true and 0 otherwise.
+int cgequal(int r1, int r2);
+int cgnotequal(int r1, int r2);
+int cglessthan(int r1, int r2);
+int cggreaterthan(int r1, int r2);
+int cglessequal(int r1, int r2);
+int cggreaterequal(int r1, int r2);
+
 // Define a global symbol
 void cgglobsym(char *sym);
 void cgprintint(int r);

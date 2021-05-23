@@ -11,29 +11,22 @@ struct token Token;
 // Operator precedence for each token
 // A bigger number indicates a higher precedence
 static int OpPrec[] = {
-  0,  // EOF
-  10, // +
-  10, // -
-  20, // *
-  20, // /
-  0,  // INTLIT
+  0, 60, 60,      // T_EOF, T_PLUS, T_MINUS
+  70, 70,         // T_STAR, T_SLASH
+  30, 30,         // T_EQ, T_NE
+  40, 40, 40, 40  // T_LT, T_GT, T_LE, T_GE
 };
 
 // Convert a token type into an AST operation (AST node type)
-int arithop(int tok) {
-  switch (tok) {
-    case T_PLUS:
-      return A_ADD;
-    case T_MINUS:
-      return A_SUBTRACT;
-    case T_STAR:
-      return A_MULTIPLY;
-    case T_SLASH:
-      return A_DIVIDE;
-    default:
-      fprintf(stderr, "unknown arithmetic operator detected on line %d\n", Line);
-      exit(1);
-  }
+int arithop(int tokentype) {
+  // For tokens in this range, there is a 1-1 mapping between
+  // token type and node type
+  if (tokentype > T_EOF && tokentype < T_INTLIT) 
+    return tokentype;
+
+  fatald("Syntax error, token", tokentype);
+
+  return -1;
 }
 
 // Check that we have a binary operator and return
