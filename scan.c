@@ -113,13 +113,19 @@ static int scanident(int c, char *buf, int lim) {
 // time calling strcmp against all keywords.
 static int keyword(char *s) {
   switch (*s) {
-    case 'p':
-      if (!strcmp(s, "print")) 
-        return T_PRINT;
+    case 'e':
+      if (!strcmp(s, "else"))
+        return T_ELSE;
       break;
     case 'i':
       if (!strcmp(s, "int"))
         return T_INT;
+      if (!strcmp(s, "if"))
+        return T_IF;
+      break;
+    case 'p':
+      if (!strcmp(s, "print")) 
+        return T_PRINT;
       break;
   }
 
@@ -183,6 +189,18 @@ int scan(struct token *t) {
         putback(c);
         t->token = T_GT;
       }
+      break;
+    case '{':
+      t->token = T_LBRACE;
+      break;
+    case '}':
+      t->token = T_RBRACE;
+      break;
+    case '(':
+      t->token = T_LPAREN;
+      break;
+    case ')':
+      t->token = T_RPAREN;
       break;
     default:
       // If a digit was encountered, scan the entire number

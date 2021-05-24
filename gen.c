@@ -4,6 +4,56 @@
 #include "data.h"
 #include "gen.h"
 
+// Generate and return a new label number
+// each time this function is invoked.
+static int label(void) {
+  static int id = 1;
+  return id++;
+}
+
+// Generate code for an IF statement and an
+// optional ELSE clause
+static int genIFAST(struct ASTnode *n) {
+  int Lfalse, Lend;
+
+  // Generate two labels, one for the false
+  // compound statement, and another one for
+  // the end of the overall if statement.
+  // When there is no ELSE clause, Lfalse shall
+  // be the ending label.
+  Lfalse = label();
+  if (n->right)
+    Lend = label();
+
+  // Generate the condition code followed by a
+  // jump to the false label if the condition
+  // evaluates to 0
+  // Note: We cheat by passing the label as a register
+  genAST(n->left, Lfalse, n->op);
+  genfreeregs();
+
+  // Generate the statement for the TRUE clause
+  genAST(n->mid, NOREG, n->op);
+  genfreeregs();
+
+  // If there exists an ELSE clause, we skip it
+  // by jumping to the end
+  if (n->right)
+    cgjump(Lend);
+
+  cglabel(Lfalse);
+
+  // Optional ELSE:
+  // Generate the false statement and the end label
+  if (n->right) {
+    genAST(n->right, NOREG, n->op);
+    genfreeregs();
+    cglabel(Lend);
+  }
+
+  return NOREG;
+}
+
 // Given an AST node, recursively generate assembly
 // code for it. Returns the identifier of the register
 // that contains the results of evaluating this node.
@@ -11,13 +61,26 @@
 // reg - Since we evaluate the left child before the right
 //       child, this allows us to pass results from the evaluation
 //       of the left child to aid the evaluation of the right child.
-int genAST(struct ASTnode *n, int reg) {
+// parentASTop - Operator of the parent AST node      
+int genAST(struct ASTnode *n, int reg, int parentASTop) {
   // Registers containing the results of evaluating
   // the left and right child nodes
   int leftreg, rightreg;
 
-  if (n->left) leftreg = genAST(n->left, -1);
-  if (n->right) rightreg = genAST(n->right, leftreg);
+  // Handle special cases
+  switch (n->op) {
+    case A_IF:
+      return genIFAST(n);
+    case A_GLUE:
+      genAST(n->left, NOREG, n->op);
+      genfreeregs();
+      genAST(n->right, NOREG, n->op);
+      genfreeregs();
+      return NOREG;
+  }
+
+  if (n->left) leftreg = genAST(n->left, NOREG, n->op);
+  if (n->right) rightreg = genAST(n->right, leftreg, n->op);
 
   switch (n->op) {
     case A_ADD:
@@ -28,6 +91,19 @@ int genAST(struct ASTnode *n, int reg) {
       return cgmul(leftreg, rightreg);
     case A_DIVIDE:
       return cgdiv(leftreg, rightreg);
+    case A_EQ:
+    case A_NE:
+    case A_LT:
+    case A_GT:
+    case A_LE:
+    case A_GE:
+      // If the parent node is an A_IF, generate a 
+      // compare and jump, otherwise compare registers
+      // and set to either 0 or 1
+      if (parentASTop == A_IF)
+        return cgcompare_and_jump(n->op, leftreg, rightreg, reg);
+      else
+        return cgcompare_and_set(n->op, leftreg, rightreg);
     case A_INTLIT:
       return cgloadint(n->v.intvalue);
     case A_IDENT:
@@ -38,18 +114,11 @@ int genAST(struct ASTnode *n, int reg) {
       // Assignation should have been completed at the
       // A_LVIDENT node
       return rightreg;
-    case A_EQ:
-      return cgequal(leftreg, rightreg);
-    case A_NE:
-      return cgnotequal(leftreg, rightreg);
-    case A_LT:
-      return cglessthan(leftreg, rightreg);
-    case A_GT:
-      return cggreaterthan(leftreg, rightreg);
-    case A_LE:
-      return cglessequal(leftreg, rightreg);
-    case A_GE:
-      return cggreaterequal(leftreg, rightreg);
+    case A_PRINT:
+      // Print left child's register and return nothing
+      genprintint(leftreg);
+      genfreeregs();
+      return NOREG;
     default:
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);
@@ -60,18 +129,5 @@ void genpreamble()        { cgpreamble(); }
 void genpostamble()       { cgpostamble(); }
 void genfreeregs()        { freeall_registers(); }
 void genprintint(int reg) { cgprintint(reg); }
-
-void generatecode(struct ASTnode *n) {
-  int reg;
-
-  // Handle preamble (leading code)
-  cgpreamble();
-  reg = genAST(n, -1);
-  // Print final result
-  cgprintint(reg);
-
-  // Handle postamble (trailing code)
-  cgpostamble();
-}
 
 void genglobsym(char *s) { cgglobsym(s); }

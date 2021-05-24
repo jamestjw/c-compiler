@@ -11,16 +11,19 @@ int cgloadglob(char *identifier);
 // Load a value to a global symbol
 int cgstorglob(int r, char *identifier);
 
-// Compare values in two registers, sets the
-// register that contains the result to 1
-// if the comparison is true and 0 otherwise.
-int cgequal(int r1, int r2);
-int cgnotequal(int r1, int r2);
-int cglessthan(int r1, int r2);
-int cggreaterthan(int r1, int r2);
-int cglessequal(int r1, int r2);
-int cggreaterequal(int r1, int r2);
-
 // Define a global symbol
 void cgglobsym(char *sym);
 void cgprintint(int r);
+
+// Compares values in two registers based on the
+// given operator and returns a register containing
+// either 0 or 1 depending on the result of the comparison
+int cgcompare_and_set(int ASTop, int r1, int r2);
+// Compares values in two registers and jumps to the label
+// if the comparison is false
+int cgcompare_and_jump(int ASTop, int r1, int r2, int label);
+
+// Generates a jump to a given label
+void cgjump(int);
+// Generates a label, e.g. L1 
+void cglabel(int l);

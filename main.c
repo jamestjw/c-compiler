@@ -25,7 +25,7 @@ static void usage(char *prog) {
 }
 
 int main(int argc, char* argv[]) {
-  struct ASTnode *n;
+  struct ASTnode *tree;
 
   // Print help message with proper way to call
   // this program and exit.
@@ -45,7 +45,12 @@ int main(int argc, char* argv[]) {
 
   scan(&Token);
   genpreamble();
-  statements();
+
+  // Construct a AST representing the entire program
+  tree = compound_statement();
+  // Generate code for the AST
+  genAST(tree, NOREG, 0);
+
   genpostamble();
   fclose(Outfile);
   exit(0);

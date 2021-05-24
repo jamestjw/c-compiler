@@ -80,6 +80,8 @@ struct ASTnode *binexpr(int ptp) {
   tokentype = Token.token;
   // If we hit a semi colon, return the left node
   if (tokentype == T_SEMI) return left;
+  // Ensure that we have a binary operator
+  if (tokentype < T_PLUS || tokentype > T_GE) return left;
 
   // While the current token's precedence is
   // higher than that of the previous token
@@ -92,10 +94,11 @@ struct ASTnode *binexpr(int ptp) {
     right = binexpr(OpPrec[tokentype]);
 
     // Join that subtree with the left node
-    left  = mkastnode(arithop(tokentype), left, right, 0);
+    left  = mkastnode(arithop(tokentype), left, NULL, right, 0);
 
     tokentype = Token.token;
     if (tokentype == T_SEMI) return left;
+    if (tokentype < T_PLUS || tokentype > T_GE) return left;
   }
 
   // When the next operator has a precedence equal or lower,

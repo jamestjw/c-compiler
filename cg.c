@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "data.h"
 #include "cg.h"
+#include "misc.h"
 
 // List of generic registers that the code will work on
 static char *reglist[4] = { "%r8", "%r9", "%r10", "%r11" };
@@ -9,6 +10,14 @@ static char *reglist[4] = { "%r8", "%r9", "%r10", "%r11" };
 static char *breglist[4] = { "%r8b", "%r9b", "%r10b", "%r11b" }; 
 // List of available registers
 static int freereg[4];
+
+// List of comparison instructions corresponding to
+// A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
+static char *cmplist[] = { "sete", "setne", "setl", "setg", "setle", "setge" };
+
+// List of inverted jump instructions corresponding to
+// A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
+static char *invcmplist[] = { "jne", "je", "jge", "jle", "jg", "jl" };
 
 // Mark all registers as available
 void freeall_registers(void) {
@@ -169,27 +178,45 @@ void cgglobsym(char *sym) {
   fprintf(Outfile, "\t.comm\t%s,8,8\n", sym);
 }
 
-// Compare two registers
-static int cgcompare(int r1, int r2, char *how) {
+int cgcompare_and_set(int ASTop, int r1, int r2) {
+  if (ASTop < A_EQ || ASTop > A_GE)
+    fatal("Bad ASTop in cgcompare_and_set()");
+
   // cmpq %r2, %r1
   // This calculates %r1 - %r2
   fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
   // setge %r10b
   // This only sets the lowest byte of the register
   // Note: These instructions only works on 8-bit registers
-  fprintf(Outfile, "\t%s\t%s\n", how, breglist[r2]);
-  // andq $255, %r2
-  // Zero-ing out the bits above the first byte
-  fprintf(Outfile, "\tandq\t$255, %s\n", reglist[r2]);
+  fprintf(Outfile, "\t%s\t%s\n", cmplist[ASTop - A_EQ], breglist[r2]);
+  // movzbq %r10b, %r10
+  // Moves the lowest bytes from one register and extends it to fill
+  // a 64-bit register
+  fprintf(Outfile, "\tmovzbq\t%s, %s\n", breglist[r2], reglist[r2]);
 
   free_register(r1);
   return r2;
 }
 
-int cgequal(int r1, int r2) { return(cgcompare(r1, r2, "sete")); }
-int cgnotequal(int r1, int r2) { return(cgcompare(r1, r2, "setne")); }
-int cglessthan(int r1, int r2) { return(cgcompare(r1, r2, "setl")); }
-int cggreaterthan(int r1, int r2) { return(cgcompare(r1, r2, "setg")); }
-int cglessequal(int r1, int r2) { return(cgcompare(r1, r2, "setle")); }
-int cggreaterequal(int r1, int r2) { return(cgcompare(r1, r2, "setge")); }
+void cglabel(int l) {
+  // L1:
+  fprintf(Outfile, "L%d:\n", l);
+}
+
+void cgjump(int l) {
+  // jmp L1
+  fprintf(Outfile, "\tjmp\tL%d\n", l);
+}
+
+int cgcompare_and_jump(int ASTop, int r1, int r2, int label) {
+   if (ASTop < A_EQ || ASTop > A_GE)
+    fatal("Bad ASTop in cgcompare_and_jump()");
+  
+   // cmpq %r2, %r1
+   fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
+   // jne L1
+   fprintf(Outfile, "\t%s\tL%d\n", invcmplist[ASTop - A_EQ], label);
+   freeall_registers();
+   return NOREG;
+}
 
