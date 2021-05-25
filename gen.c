@@ -54,6 +54,32 @@ static int genIFAST(struct ASTnode *n) {
   return NOREG;
 }
 
+static int genWHILE(struct ASTnode *n) {
+  int Lstart, Lend;
+
+  // Generate the start and end labels
+  // and output the start label
+  Lstart = label();
+  Lend = label();
+  cglabel(Lstart);
+
+  // Generate the code for the conditional
+  // followed by a jump to the end.
+  genAST(n->left, Lend, n->op);
+  genfreeregs();
+
+  // Generate code for the body 
+  genAST(n->right, NOREG, n->op);
+  genfreeregs();
+
+  // Output the jump to the beginning of the loop
+  cgjump(Lstart);
+  // Output the end label
+  cglabel(Lend);
+
+  return NOREG;
+}
+
 // Given an AST node, recursively generate assembly
 // code for it. Returns the identifier of the register
 // that contains the results of evaluating this node.
@@ -71,6 +97,8 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
   switch (n->op) {
     case A_IF:
       return genIFAST(n);
+    case A_WHILE:
+      return genWHILE(n);
     case A_GLUE:
       genAST(n->left, NOREG, n->op);
       genfreeregs();
@@ -100,7 +128,7 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
       // If the parent node is an A_IF, generate a 
       // compare and jump, otherwise compare registers
       // and set to either 0 or 1
-      if (parentASTop == A_IF)
+      if (parentASTop == A_IF || parentASTop == A_WHILE)
         return cgcompare_and_jump(n->op, leftreg, rightreg, reg);
       else
         return cgcompare_and_set(n->op, leftreg, rightreg);

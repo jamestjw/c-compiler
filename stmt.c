@@ -81,6 +81,28 @@ struct ASTnode *if_statement(void) {
   return mkastnode(A_IF, condAST, trueAST, falseAST, 0);
 }
 
+struct ASTnode *while_statement(void) {
+  struct ASTnode *condAST, *bodyAST;
+
+  // match 'while' '('
+  match(T_WHILE, "while");
+  lparen();
+
+  // Parse the conditional expression
+  // and the subsequent ')'.
+  // TODO: For now, we ensure that the operation
+  // is a comparison
+  condAST = binexpr(0);
+  if (condAST->op < A_EQ || condAST->op > A_GE)
+    fatal("Bad comparison operator in 'while' statement");
+  rparen();
+
+  // Parse the body of the while statement
+  bodyAST = compound_statement();
+
+  return mkastnode(A_WHILE, condAST, NULL, bodyAST, 0);
+}
+
 struct ASTnode *compound_statement(void) {
   struct ASTnode *left = NULL;
   struct ASTnode *tree;
@@ -101,6 +123,9 @@ struct ASTnode *compound_statement(void) {
         break;
       case T_IF:
         tree = if_statement();
+        break;
+      case T_WHILE:
+        tree = while_statement();
         break;
       case T_RBRACE:
         // Match the right brace and return the AST
