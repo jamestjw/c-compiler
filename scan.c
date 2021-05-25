@@ -117,6 +117,10 @@ static int keyword(char *s) {
       if (!strcmp(s, "else"))
         return T_ELSE;
       break;
+    case 'f':
+      if (!strcmp(s, "for"))
+        return T_FOR;
+      break;
     case 'i':
       if (!strcmp(s, "int"))
         return T_INT;
