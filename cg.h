@@ -1,6 +1,9 @@
 void freeall_registers(void);
 void cgpreamble();
 void cgpostamble();
+void cgfuncpreamble(char *name);
+void cgfuncpostamble();
+
 int cgloadint(int value);
 int cgadd(int r1, int r2);
 int cgsub(int r1, int r2);

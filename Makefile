@@ -8,7 +8,7 @@ clean:
 test: comp1 tests/runtests
 	(cd tests; chmod +x runtests; ./runtests)
 
-test7: comp1 tests/input07
-	./comp1 tests/input07
+test8: comp1 tests/input08
+	./comp1 tests/input08
 	cc -o out out.s
 	./out

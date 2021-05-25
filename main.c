@@ -1,5 +1,6 @@
 #include <errno.h>
 #include "data.h"
+#include "decl.h"
 #include "expr.h"
 #include "gen.h"
 #include "scan.h"
@@ -46,12 +47,13 @@ int main(int argc, char* argv[]) {
   scan(&Token);
   genpreamble();
 
-  // Construct a AST representing the entire program
-  tree = compound_statement();
-  // Generate code for the AST
-  genAST(tree, NOREG, 0);
+  while (1) {
+    tree = function_declaration();
+    genAST(tree, NOREG, 0);
+    if (Token.token == T_EOF)
+      break;
+  }
 
-  genpostamble();
   fclose(Outfile);
   exit(0);
 }

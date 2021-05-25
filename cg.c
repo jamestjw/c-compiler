@@ -67,13 +67,26 @@ void cgpreamble() {
 	  "\tnop\n"
 	  "\tleave\n"
 	  "\tret\n"
-	  "\n"
-	  "\t.globl\tmain\n"
-	  "\t.type\tmain, @function\n"
-	  "main:\n"
-	  "\tpushq\t%rbp\n"
-	  "\tmovq	%rsp, %rbp\n",
+	  "\n",
     Outfile);
+}
+
+void cgfuncpreamble(char *name) {
+    fprintf(Outfile,
+          "\t.text\n"
+          "\t.globl\t%s\n"
+          "\t.type\t%s, @function\n"
+          "%s:\n" "\tpushq\t%%rbp\n"
+          "\tmovq\t%%rsp, %%rbp\n", name, name, name);
+}
+
+void cgfuncpostamble() {
+  fputs(
+      "\tmovl $0, %eax\n"
+      "\tpopq %rbp\n"
+      "\tret\n",
+      Outfile
+      );
 }
 
 void cgpostamble() {
