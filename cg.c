@@ -171,24 +171,42 @@ void cgprintint(int r) {
   free_register(r);
 }
 
-int cgloadglob(char *identifier) {
+int cgloadglob(int id) {
   int r = alloc_register();
 
-  // e.g. movq identifier(%rip), %r10
-  fprintf(Outfile, "\tmovq\t%s(\%%rip), %s\n", identifier, reglist[r]);
+  if (Gsym[id].type == P_INT)
+    // e.g. movq identifier(%rip), %r10
+    fprintf(Outfile, "\tmovq\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
+  else 
+    // e.g. movzbq identifier(%rip), %r10
+    // Zeroes the destination register and then
+    // moves a single byte into it when dealing
+    // with chars
+    fprintf(Outfile, "\tmovzbq\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
+
   return r;
 }
 
-int cgstorglob(int r, char *identifier) {
-  // e.g. movq %r10, identifier(%rip)
-  fprintf(Outfile, "\tmovq\t%s, %s(\%%rip)\n", reglist[r], identifier);
+int cgstorglob(int r, int id) {
+  if (Gsym[id].type == P_INT)
+    // e.g. movq %r10, identifier(%rip)
+    fprintf(Outfile, "\tmovq\t%s, %s(\%%rip)\n", reglist[r], Gsym[id].name);
+  else
+    // Only move a single byte for chars
+    // e.g. movb %r10, identifier(%rip)
+    fprintf(Outfile, "\tmovb\t%s, %s(\%%rip)\n", breglist[r], Gsym[id].name);
 
   return r;
 }
 
-void cgglobsym(char *sym) {
-  // e.g. .comm sym,8,8
-  fprintf(Outfile, "\t.comm\t%s,8,8\n", sym);
+void cgglobsym(int id) {
+  // We allocate either 1 or 8 bytes depending on the var type
+  if (Gsym[id].type == P_INT)
+    // e.g. .comm var_name,8,8
+    fprintf(Outfile, "\t.comm\t%s,8,8\n", Gsym[id].name);
+  else
+    // e.g. .comm var_name,1,1
+    fprintf(Outfile, "\t.comm\t%s,1,1\n", Gsym[id].name);
 }
 
 int cgcompare_and_set(int ASTop, int r1, int r2) {
@@ -233,3 +251,9 @@ int cgcompare_and_jump(int ASTop, int r1, int r2, int label) {
    return NOREG;
 }
 
+int cgwiden(int r, int oldtype, int newtype) {
+  // cgloadglob has already taken care of the widening
+  // of P_CHAR variables, hence we have nothing to do
+  // here.
+  return r;
+}

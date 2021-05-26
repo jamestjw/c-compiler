@@ -25,7 +25,7 @@ enum {
 
   // Keywords
   T_PRINT, T_INT, T_IF, T_ELSE, T_WHILE,
-  T_FOR, T_VOID,
+  T_FOR, T_VOID, T_CHAR,
 };
 
 // AST node types
@@ -35,12 +35,13 @@ enum {
   A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE,
   A_INTLIT,
   A_IDENT, A_LVIDENT, A_ASSIGN, A_PRINT, A_GLUE, 
-  A_IF, A_WHILE, A_FUNCTION,
+  A_IF, A_WHILE, A_FUNCTION, A_WIDEN,
 };
 
 // AST structure
 struct ASTnode {
   int op;                   // "Operation" to be performed on the tree
+  int type;                 // Type of expression this tree generates
   struct ASTnode *left;     // Left, middle and right child trees
   struct ASTnode *mid;
   struct ASTnode *right;
@@ -53,4 +54,17 @@ struct ASTnode {
 // Symbol table entry
 struct symtable {
   char *name; // Name of a symbol
+  int type;   // Primitive type of the symbol
+  int stype;  // Structural type of the symbol
 };
+
+// Primitive types
+enum {
+  P_NONE, P_VOID, P_CHAR, P_INT,
+};
+
+// Structural types
+enum {
+  S_VARIABLE, S_FUNCTION,
+};
+

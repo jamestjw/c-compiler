@@ -30,7 +30,7 @@ static int newglob(void) {
   return p;
 }
 
-int addglob(char *name) {
+int addglob(char *name, int type, int stype) {
   int y;
 
   // If the symbol is already in the table, just return it
@@ -41,5 +41,8 @@ int addglob(char *name) {
   // Get a new slot and fill it otherwise
   y = newglob();
   Gsym[y].name = strdup(name);
+  Gsym[y].type = type;
+  Gsym[y].stype = stype;
+
   return y;
 }

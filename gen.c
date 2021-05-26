@@ -141,9 +141,9 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
     case A_INTLIT:
       return cgloadint(n->v.intvalue);
     case A_IDENT:
-      return cgloadglob(Gsym[n->v.id].name);
+      return cgloadglob(n->v.id);
     case A_LVIDENT:
-      return cgstorglob(reg, Gsym[n->v.id].name);
+      return cgstorglob(reg, n->v.id);
     case A_ASSIGN:
       // Assignation should have been completed at the
       // A_LVIDENT node
@@ -153,6 +153,8 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
       genprintint(leftreg);
       genfreeregs();
       return NOREG;
+    case A_WIDEN:
+      return cgwiden(leftreg, n->left->type, n->type);
     default:
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);
@@ -164,4 +166,4 @@ void genpostamble()       { cgpostamble(); }
 void genfreeregs()        { freeall_registers(); }
 void genprintint(int reg) { cgprintint(reg); }
 
-void genglobsym(char *s) { cgglobsym(s); }
+void genglobsym(int id) { cgglobsym(id); }

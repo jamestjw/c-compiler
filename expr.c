@@ -4,6 +4,7 @@
 #include "scan.h"
 #include "sym.h"
 #include "tree.h"
+#include "types.h"
 
 // Contains most recently scanned token from input
 struct token Token;
@@ -52,13 +53,18 @@ static struct ASTnode *primary(void) {
 
   switch (Token.token) {
     case T_INTLIT:
-      n = mkastleaf(A_INTLIT, Token.intvalue);
+      // Create AST node with P_CHAR type if within
+      // P_CHAR range
+      if ((Token.intvalue) >= 0 && (Token.intvalue < 256))
+        n = mkastleaf(A_INTLIT, P_CHAR, Token.intvalue);
+      else
+        n = mkastleaf(A_INTLIT, P_INT, Token.intvalue);
       break;
     case T_IDENT:
       id = findglob(Text);
       if (id == -1)
         fatals("Unknown variable", Text);
-      n = mkastleaf(A_IDENT, id);
+      n = mkastleaf(A_IDENT, Gsym[id].type, id);
       break;
     default:
       fatald("Syntax error, token", Token.token);
@@ -72,6 +78,7 @@ static struct ASTnode *primary(void) {
 // Parameter ptp is the precedence of the previous token
 struct ASTnode *binexpr(int ptp) {
   struct ASTnode *left, *right;
+  int lefttype, righttype;
   int tokentype;
 
   // Build the left node using an integer literal
@@ -93,8 +100,22 @@ struct ASTnode *binexpr(int ptp) {
     // current token
     right = binexpr(OpPrec[tokentype]);
 
+    // Ensure that the two types are compatible
+    lefttype = left->type;
+    righttype = right->type;
+    if (!type_compatible(&lefttype, &righttype, 0))
+      fatal("Incompatible types");
+
+    // Widen either side if required, type vars are A_WIDEN
+    if (lefttype)
+      left = mkastunary(lefttype, right->type, left, 0);
+    if (righttype)
+      right = mkastunary(righttype, left->type, right, 0);
+
     // Join that subtree with the left node
-    left  = mkastnode(arithop(tokentype), left, NULL, right, 0);
+    // The node contains an expression of the same type
+    // as the left node.
+    left = mkastnode(arithop(tokentype), left->type, left, NULL, right, 0);
 
     tokentype = Token.token;
     if (tokentype == T_SEMI) return left;
