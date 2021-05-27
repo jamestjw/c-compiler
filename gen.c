@@ -6,7 +6,7 @@
 
 // Generate and return a new label number
 // each time this function is invoked.
-static int label(void) {
+int genlabel(void) {
   static int id = 1;
   return id++;
 }
@@ -21,9 +21,9 @@ static int genIFAST(struct ASTnode *n) {
   // the end of the overall if statement.
   // When there is no ELSE clause, Lfalse shall
   // be the ending label.
-  Lfalse = label();
+  Lfalse = genlabel();
   if (n->right)
-    Lend = label();
+    Lend = genlabel();
 
   // Generate the condition code followed by a
   // jump to the false label if the condition
@@ -59,8 +59,8 @@ static int genWHILE(struct ASTnode *n) {
 
   // Generate the start and end labels
   // and output the start label
-  Lstart = label();
-  Lend = label();
+  Lstart = genlabel();
+  Lend = genlabel();
   cglabel(Lstart);
 
   // Generate the code for the conditional
@@ -109,7 +109,7 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
       // Generate the function preamble
       cgfuncpreamble(Gsym[n->v.id].name);
       genAST(n->left, NOREG, n->op);
-      cgfuncpostamble();
+      cgfuncpostamble(n->v.id);
       return NOREG;
   }
 
@@ -155,6 +155,11 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
       return NOREG;
     case A_WIDEN:
       return cgwiden(leftreg, n->left->type, n->type);
+    case A_RETURN:
+      cgreturn(leftreg, Functionid);
+      return NOREG;
+    case A_FUNCCALL:
+      return cgcall(leftreg, n->v.id);
     default:
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);
@@ -167,3 +172,7 @@ void genfreeregs()        { freeall_registers(); }
 void genprintint(int reg) { cgprintint(reg); }
 
 void genglobsym(int id) { cgglobsym(id); }
+
+int genprimsize(int type) {
+  return cgprimsize(type);
+}

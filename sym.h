@@ -4,4 +4,4 @@
 int findglob(char *s);
 // Add a global symbol to the symbol table and returning
 // its slot number.
-int addglob(char *name, int type, int stype);
+int addglob(char *name, int type, int stype, int endlabel);

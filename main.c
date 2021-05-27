@@ -5,6 +5,7 @@
 #include "gen.h"
 #include "scan.h"
 #include "stmt.h"
+#include "sym.h"
 #include "interp.h"
 
 int Line;
@@ -43,6 +44,10 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Unable to open out.s: %s\n", strerror(errno));
     exit(1);
   }
+
+  // TODO: For now, use this hack to ensure that printint()
+  // is defined
+  addglob("printint", P_CHAR, S_FUNCTION, 0);
 
   scan(&Token);
   genpreamble();

@@ -46,6 +46,11 @@ static struct ASTnode *assignment_statement(void) {
   // Match an identifier
   ident();
 
+  // Check if this is a variable or a function call
+  // by checking if the next token is '('
+  if (Token.token == T_LPAREN) 
+    return funccall();
+
   if ((id = findglob(Text)) == -1) {
     fatals("Assigning to undeclared variable", Text);
   }
@@ -157,12 +162,45 @@ static struct ASTnode *for_statement(void) {
   return mkastnode(A_GLUE, P_NONE, preopAST, NULL, tree,  0);
 }
 
+static struct ASTnode *return_statement(void) {
+  struct ASTnode *tree;
+  int returntype, functype;
+
+  functype = Gsym[Functionid].type;
+
+  if (functype == P_VOID)
+    fatal("Can't return from a void function");
+
+  match(T_RETURN, "return");
+  lparen();
+
+  tree = binexpr(0);
+
+  returntype = tree->type;
+  functype = Gsym[Functionid].type;
+
+  // Check compatibility while allowing return type
+  // to be widened to function type if needed
+  if (!type_compatible(&returntype, &functype, 1))
+    fatal("Incompatible return types");
+
+  if (returntype)
+    tree = mkastunary(returntype, functype, tree, 0);
+
+  tree = mkastunary(A_RETURN, P_NONE, tree, 0);
+  
+  rparen();
+
+  return tree;
+}
+
 static struct ASTnode *single_statement(void) {
   switch (Token.token) {
     case T_PRINT:
       return print_statement();
     case T_CHAR:
     case T_INT:
+    case T_LONG:
       var_declaration();
       return NULL; // No AST here
     case T_IDENT:
@@ -173,6 +211,8 @@ static struct ASTnode *single_statement(void) {
       return while_statement();
     case T_FOR:
       return for_statement();
+    case T_RETURN:
+      return return_statement();
     default:
       fatald("Syntax error, token", Token.token);
       return NULL;
@@ -190,7 +230,9 @@ struct ASTnode *compound_statement(void) {
 
     // Some statements must be followed by a semicolon
     if (tree != NULL && 
-        (tree->op == A_PRINT || tree->op == A_ASSIGN))
+        (tree->op == A_PRINT || tree->op == A_ASSIGN ||
+         tree->op == A_RETURN || tree->op == A_FUNCCALL
+         ))
       semi();
 
     if (tree != NULL) {

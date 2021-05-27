@@ -2,7 +2,7 @@ void freeall_registers(void);
 void cgpreamble();
 void cgpostamble();
 void cgfuncpreamble(char *name);
-void cgfuncpostamble();
+void cgfuncpostamble(int id);
 
 int cgloadint(int value);
 int cgadd(int r1, int r2);
@@ -35,3 +35,13 @@ void cglabel(int l);
 // to the new type, and return a register with the
 // new value
 int cgwiden(int r, int oldtype, int newtype);
+
+// Return the size of a primitive type
+int cgprimsize(int type);
+// Call a function with one argument from the
+// given register and return a register with the 
+// result of the function call
+int cgcall(int r, int id);
+// Return from a function call while returning a
+// value in the passed register
+void cgreturn(int reg, int id);

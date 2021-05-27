@@ -7,6 +7,9 @@
 
 char Text[TEXTLEN + 1];
 
+// Pointer to a rejected token
+static struct token *Rejtoken = NULL;
+
 // Get the next char from the input file.
 static int next(void) {
   int c;
@@ -131,9 +134,17 @@ static int keyword(char *s) {
       if (!strcmp(s, "if"))
         return T_IF;
       break;
+    case 'l':
+      if (!strcmp(s, "long"))
+        return T_LONG;
+      break;
     case 'p':
       if (!strcmp(s, "print")) 
         return T_PRINT;
+      break;
+    case 'r':
+      if (!strcmp(s, "return")) 
+        return T_RETURN;
       break;
     case 'v':
       if (!strcmp(s, "void")) 
@@ -149,8 +160,21 @@ static int keyword(char *s) {
   return 0;
 }
 
+void reject_token(struct token *t) {
+  if (Rejtoken != NULL)
+    fatal("Can't reject token twice");
+  Rejtoken = t;  
+}
+
 int scan(struct token *t) {
   int c, tokentype;
+
+  // Return a rejected token if possible
+  if (Rejtoken != NULL) {
+    t = Rejtoken;
+    Rejtoken = NULL;
+    return 1;
+  }
   
   // Skip whitespace
   c = skip();
@@ -245,3 +269,4 @@ int scan(struct token *t) {
 
   return 1;
 }
+

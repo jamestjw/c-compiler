@@ -6,12 +6,15 @@
 #include "sym.h"
 #include "tree.h"
 
+int Functionid;
+
 // Parse the current token and 
 // return a primitive type enum value
 int parse_type(int t) {
   if (t == T_CHAR) return P_CHAR;
   if (t == T_INT) return P_INT;
   if (t == T_VOID) return P_VOID;
+  if (t == T_LONG) return P_LONG;
 
   fatald("Illegal type, token", t);
 
@@ -27,26 +30,42 @@ void var_declaration(void) {
   scan(&Token);
 
   ident();
-  id = addglob(Text, type, S_VARIABLE);
+  id = addglob(Text, type, S_VARIABLE, 0);
   genglobsym(id);
   semi();
 }
 
 struct ASTnode *function_declaration(void) {
-  struct ASTnode *tree;
-  int nameslot;
+  struct ASTnode *tree, *finalstmt;
+  int nameslot, type, endlabel;
 
-  // Match 'void' 'identifier '(' ')'
-  // TODO: Support other return types
-  match(T_VOID, "void");
+  // Get the type of the variable and the identifier
+  type = parse_type(Token.token);
+
+  scan(&Token);
   ident();
-  nameslot = addglob(Text, P_VOID, S_FUNCTION);
+
+  // Get a label for the label that we place at the 
+  // end of the function
+  endlabel = genlabel();
+
+  nameslot = addglob(Text, type, S_FUNCTION, endlabel);
+  Functionid = nameslot;
   // TODO: Support function with parameters
   lparen();
   rparen();
 
   // Parse function body
   tree = compound_statement();
+
+  // If the function type is not P_VOID,
+  // check that the last AST operation in the
+  // compound statement was a return statement
+  if (type != P_VOID) {
+    finalstmt = (tree->op == A_GLUE ? tree->right : tree);
+    if (finalstmt == NULL || finalstmt->op != A_RETURN)
+      fatal("No return for function with non-void type");
+  }
 
   return mkastunary(A_FUNCTION, P_VOID, tree, nameslot);
 }

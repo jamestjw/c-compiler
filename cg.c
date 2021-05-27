@@ -8,6 +8,8 @@
 static char *reglist[4] = { "%r8", "%r9", "%r10", "%r11" };
 // Lower 8 bits of registers in reglist
 static char *breglist[4] = { "%r8b", "%r9b", "%r10b", "%r11b" }; 
+// Lower 4 bytes of registers in reglist
+static char *dreglist[4] = { "%r8d", "%r9d", "%r10d", "%r11d" }; 
 // List of available registers
 static int freereg[4];
 
@@ -23,6 +25,15 @@ static char *invcmplist[] = { "jne", "je", "jge", "jle", "jg", "jl" };
 void freeall_registers(void) {
   freereg[0] = freereg[1] = freereg[2] = freereg[3] = 1;
 }
+
+// Array of sizes of primitives
+static int psize[] = {
+  0, // P_NONE 
+  0, // P_VOID
+  1, // P_CHAR
+  4, // P_INT
+  8, // P_LONG
+};
 
 // Allocate a free register and returns the corresponding
 // identifier. Program exits if no available registers remain.
@@ -50,25 +61,7 @@ static void free_register(int reg) {
 void cgpreamble() {
   freeall_registers();
 
-  fputs(
-	  "\t.text\n"
-	  ".LC0:\n"
-	  "\t.string\t\"%d\\n\"\n"
-	  "printint:\n"
-	  "\tpushq\t%rbp\n"
-	  "\tmovq\t%rsp, %rbp\n"
-	  "\tsubq\t$16, %rsp\n"
-	  "\tmovl\t%edi, -4(%rbp)\n"
-	  "\tmovl\t-4(%rbp), %eax\n"
-	  "\tmovl\t%eax, %esi\n"
-	  "\tleaq	.LC0(%rip), %rdi\n"
-	  "\tmovl	$0, %eax\n"
-	  "\tcall	printf@PLT\n"
-	  "\tnop\n"
-	  "\tleave\n"
-	  "\tret\n"
-	  "\n",
-    Outfile);
+  fputs("\t.text\n", Outfile);
 }
 
 void cgfuncpreamble(char *name) {
@@ -80,9 +73,9 @@ void cgfuncpreamble(char *name) {
           "\tmovq\t%%rsp, %%rbp\n", name, name, name);
 }
 
-void cgfuncpostamble() {
+void cgfuncpostamble(int id) {
+  cglabel(Gsym[id].endlabel);
   fputs(
-      "\tmovl $0, %eax\n"
       "\tpopq %rbp\n"
       "\tret\n",
       Outfile
@@ -174,39 +167,55 @@ void cgprintint(int r) {
 int cgloadglob(int id) {
   int r = alloc_register();
 
-  if (Gsym[id].type == P_INT)
-    // e.g. movq identifier(%rip), %r10
-    fprintf(Outfile, "\tmovq\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
-  else 
-    // e.g. movzbq identifier(%rip), %r10
-    // Zeroes the destination register and then
-    // moves a single byte into it when dealing
-    // with chars
-    fprintf(Outfile, "\tmovzbq\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
+  switch (Gsym[id].type) {
+    case P_CHAR:
+      // e.g. movzbq identifier(%rip), %r8
+      fprintf(Outfile, "\tmovzbq\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
+      break;
+    case P_INT:
+      // e.g. movzbl identifier(%rip), %r8
+      fprintf(Outfile, "\tmovzbl\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
+      break;
+    case P_LONG:
+      // e.g. movq identifier(%rip), %r8
+      fprintf(Outfile, "\tmovq\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
+      break;
+    default:
+      fatald("Bad type in cgloadglob", Gsym[id].type);
+  }
 
   return r;
 }
 
 int cgstorglob(int r, int id) {
-  if (Gsym[id].type == P_INT)
-    // e.g. movq %r10, identifier(%rip)
-    fprintf(Outfile, "\tmovq\t%s, %s(\%%rip)\n", reglist[r], Gsym[id].name);
-  else
-    // Only move a single byte for chars
-    // e.g. movb %r10, identifier(%rip)
-    fprintf(Outfile, "\tmovb\t%s, %s(\%%rip)\n", breglist[r], Gsym[id].name);
+  switch (Gsym[id].type) {
+    case P_CHAR:
+      // Only move a single byte for chars
+      // e.g. movb %r10b, identifier(%rip)
+      fprintf(Outfile, "\tmovb\t%s, %s(\%%rip)\n", breglist[r], Gsym[id].name);
+      break;
+    case P_INT:
+      // e.g. movl %r10d, identifier(%rip)
+      fprintf(Outfile, "\tmovl\t%s, %s(\%%rip)\n", dreglist[r], Gsym[id].name);
+      break;
+    case P_LONG:
+      // e.g. movq %r10, identifier(%rip)
+      fprintf(Outfile, "\tmovq\t%s, %s(\%%rip)\n", reglist[r], Gsym[id].name);
+      break;
+    default:
+      fatald("Bad type in cgloadglob", Gsym[id].type);
+  }
 
   return r;
 }
 
 void cgglobsym(int id) {
-  // We allocate either 1 or 8 bytes depending on the var type
-  if (Gsym[id].type == P_INT)
-    // e.g. .comm var_name,8,8
-    fprintf(Outfile, "\t.comm\t%s,8,8\n", Gsym[id].name);
-  else
-    // e.g. .comm var_name,1,1
-    fprintf(Outfile, "\t.comm\t%s,1,1\n", Gsym[id].name);
+  int typesize;
+
+  typesize = cgprimsize(Gsym[id].type);
+
+  // e.g. .comm var_name,8,8
+  fprintf(Outfile, "\t.comm\t%s,%d,%d\n", Gsym[id].name, typesize, typesize);
 }
 
 int cgcompare_and_set(int ASTop, int r1, int r2) {
@@ -256,4 +265,47 @@ int cgwiden(int r, int oldtype, int newtype) {
   // of P_CHAR variables, hence we have nothing to do
   // here.
   return r;
+}
+
+int cgprimsize(int type) {
+  if (type < P_NONE || type > P_LONG)
+    fatal("Bad type in cgprimsize()");
+
+  return psize[type];
+}
+
+int cgcall(int r, int id) {
+  int outr = alloc_register();
+
+  // Move argument to %rdi
+  // movq %r8, %rdi
+  fprintf(Outfile, "\tmovq\t%s, %%rdi\n", reglist[r]);
+  // call funcname
+  fprintf(Outfile, "\tcall\t%s\n", Gsym[id].name);
+  // Move return code from %rax
+  // movq %rax, %r9
+  fprintf(Outfile, "\tmovq\t%%rax, %s\n", reglist[outr]);
+
+  free_register(r);
+
+  return outr;
+}
+
+void cgreturn(int reg, int id) {
+  // Move return value to %rax
+  switch (Gsym[id].type) {
+    case P_CHAR:
+      fprintf(Outfile, "\tmovzbl\t%s, %%eax\n", breglist[reg]);
+      break;
+    case P_INT:
+      fprintf(Outfile, "\tmovl\t%s, %%eax\n", dreglist[reg]);
+      break;
+    case P_LONG:
+      fprintf(Outfile, "\tmovq\t%s, %%rax\n", reglist[reg]);
+      break;
+    default:
+      fatald("Bad function type in cgreturn", Gsym[id].type);
+  }
+
+  cgjump(Gsym[id].endlabel);
 }

@@ -8,7 +8,7 @@ clean:
 test: comp1 tests/runtests
 	(cd tests; chmod +x runtests; ./runtests)
 
-test10: comp1 tests/input10
-	./comp1 tests/input10
-	cc -o out out.s
+test14: comp1 tests/input14 lib/printint.c
+	./comp1 tests/input14
+	cc -o out out.s lib/printint.c
 	./out
