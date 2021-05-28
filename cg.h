@@ -4,7 +4,7 @@ void cgpostamble();
 void cgfuncpreamble(char *name);
 void cgfuncpostamble(int id);
 
-int cgloadint(int value);
+int cgloadint(int value, int type);
 int cgadd(int r1, int r2);
 int cgsub(int r1, int r2);
 int cgmul(int r1, int r2);

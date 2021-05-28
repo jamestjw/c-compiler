@@ -92,7 +92,8 @@ void cgpostamble() {
 }
 
 // Allocates a register and loads an integer literal into it.
-int cgloadint(int value) {
+// For x86-64, we ignore the type
+int cgloadint(int value, int type) {
   int r = alloc_register();
 
   // e.g. movq 10, %r10

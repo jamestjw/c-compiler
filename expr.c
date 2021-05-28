@@ -48,7 +48,7 @@ static int op_precedence(int tokentype) {
 
 // Parse a primary factor and return a node representing it
 static struct ASTnode *primary(void) {
-  struct ASTnode *n;
+  struct ASTnode *n = NULL;
   int id;
 
   switch (Token.token) {

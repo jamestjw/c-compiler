@@ -139,7 +139,7 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
       else
         return cgcompare_and_set(n->op, leftreg, rightreg);
     case A_INTLIT:
-      return cgloadint(n->v.intvalue);
+      return cgloadint(n->v.intvalue, n->type);
     case A_IDENT:
       return cgloadglob(n->v.id);
     case A_LVIDENT:

@@ -58,7 +58,8 @@ int main(int argc, char* argv[]) {
     if (Token.token == T_EOF)
       break;
   }
-
+  
+  genpostamble();
   fclose(Outfile);
   exit(0);
 }

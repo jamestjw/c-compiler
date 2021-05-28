@@ -3,7 +3,7 @@
 #include "sym.h"
 
 struct symtable Gsym[NSYMBOLS];
-static int Globs = 0;
+int Globs = 0;
 
 int findglob(char *s) {
   int i;
