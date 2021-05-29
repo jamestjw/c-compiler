@@ -5,5 +5,5 @@ int fred() {
 void main() {
   int x;
   x= fred(2);
-  print x;
+  printint(x);
 }

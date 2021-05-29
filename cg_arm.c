@@ -39,6 +39,9 @@ static int psize[] = {
   1, // P_CHAR
   4, // P_INT
   4, // P_LONG
+  4, // P_CHARPTR
+  4, // P_INTPTR
+  4, // P_LONGPTR
 };
 
 // Allocate a free register and returns the corresponding
@@ -265,6 +268,9 @@ int cgstorglob(int r, int id) {
       break;
     case P_INT:
     case P_LONG:
+    case P_CHARPTR:
+    case P_INTPTR:
+    case P_LONGPTR:
       // e.g. str r4, [r3]
       fprintf(Outfile, "\tstr\t%s, [r3]\n", reglist[r]);
       break;
@@ -334,7 +340,7 @@ int cgwiden(int r, int oldtype, int newtype) {
 }
 
 int cgprimsize(int type) {
-  if (type < P_NONE || type > P_LONG)
+  if (type < P_NONE || type > P_LONGPTR)
     fatal("Bad type in cgprimsize()");
 
   return psize[type];
@@ -359,3 +365,31 @@ void cgreturn(int reg, int id) {
   fprintf(Outfile, "\tmov\tr0, %s\n", reglist[reg]);
   cgjump(Gsym[id].endlabel);
 }
+
+int cgaddress(int id) {
+  int r = alloc_register();
+  set_var_offset(id);
+  // mov r4, r4
+  fprintf(Outfile, "\tmov\t%s, r3\n", reglist[r]);
+  return r;
+}
+
+int cgderef(int r, int type) {
+  switch (type) {
+    case P_CHARPTR:
+      // ldrb r5, [r4]
+      fprintf(Outfile, "\tldrb\t%s, [%s]\n", reglist[r], reglist[r]);
+      break;
+    case P_INTPTR:
+      // ldr r5, [r4]
+      fprintf(Outfile, "\tldr\t%s, [%s]\n", reglist[r], reglist[r]);
+      break;
+    case P_LONGPTR:
+      // ldr r5, [r4]
+      fprintf(Outfile, "\tldr\t%s, [%s]\n", reglist[r], reglist[r]);
+      break;
+  }
+
+  return r;
+}
+

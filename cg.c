@@ -33,6 +33,9 @@ static int psize[] = {
   1, // P_CHAR
   4, // P_INT
   8, // P_LONG
+  8, // P_CHARPTR
+  8, // P_INTPTR
+  8, // P_LONGPTR
 };
 
 // Allocate a free register and returns the corresponding
@@ -178,6 +181,9 @@ int cgloadglob(int id) {
       fprintf(Outfile, "\tmovzbl\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
       break;
     case P_LONG:
+    case P_CHARPTR:
+    case P_INTPTR:
+    case P_LONGPTR:
       // e.g. movq identifier(%rip), %r8
       fprintf(Outfile, "\tmovq\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
       break;
@@ -200,6 +206,9 @@ int cgstorglob(int r, int id) {
       fprintf(Outfile, "\tmovl\t%s, %s(\%%rip)\n", dreglist[r], Gsym[id].name);
       break;
     case P_LONG:
+    case P_CHARPTR:
+    case P_INTPTR:
+    case P_LONGPTR:
       // e.g. movq %r10, identifier(%rip)
       fprintf(Outfile, "\tmovq\t%s, %s(\%%rip)\n", reglist[r], Gsym[id].name);
       break;
@@ -269,7 +278,7 @@ int cgwiden(int r, int oldtype, int newtype) {
 }
 
 int cgprimsize(int type) {
-  if (type < P_NONE || type > P_LONG)
+  if (type < P_NONE || type > P_LONGPTR)
     fatal("Bad type in cgprimsize()");
 
   return psize[type];
@@ -310,3 +319,29 @@ void cgreturn(int reg, int id) {
 
   cgjump(Gsym[id].endlabel);
 }
+
+int cgaddress(int id) {
+  int r = alloc_register();
+
+  // leaq varname(%rip), %r10
+  fprintf(Outfile, "\tleaq\t%s(%%rip), %s\n", Gsym[id].name, reglist[r]);
+  
+  return r;
+}
+
+int cgderef(int r, int type) {
+  switch (type) {
+    case P_CHARPTR:
+      // movzbq (%r10), r10
+      fprintf(Outfile, "\tmovzbq\t(%s), %s\n", reglist[r], reglist[r]);
+      break;
+    case P_INTPTR:
+    case P_LONGPTR:
+      // movq (%r10), r10
+      fprintf(Outfile, "\tmovq\t(%s), %s\n", reglist[r], reglist[r]);
+      break;
+  }
+
+  return r;
+}
+

@@ -84,6 +84,36 @@ static struct ASTnode *primary(void) {
   return n;
 }
 
+struct ASTnode *prefix(void) {
+  struct ASTnode *tree;
+
+  switch (Token.token) {
+    case T_AMPER:
+      scan(&Token);
+      tree = prefix();
+
+      if (tree->op != A_IDENT)
+        fatal("& operator must be followed by an identifier");
+
+      // Change the operator to A_ADDR, and change the type
+      tree->op = A_ADDR;
+      tree->type = pointer_to(tree->type);
+      break;
+    case T_STAR:
+      scan(&Token);
+      tree = prefix();
+
+      if (tree->op != A_IDENT && tree->op != A_DEREF)
+        fatal("* operator must be followed by an identifier or *");
+      tree = mkastunary(A_DEREF, value_at(tree->type), tree, 0);
+      break;
+    default:
+      tree = primary();
+  }
+
+  return tree;
+}
+
 // Return a AST node whose root is a binary operator
 // Parameter ptp is the precedence of the previous token
 struct ASTnode *binexpr(int ptp) {
@@ -91,8 +121,8 @@ struct ASTnode *binexpr(int ptp) {
   int lefttype, righttype;
   int tokentype;
 
-  // Build the left node using an integer literal
-  left = primary();
+  // Build the left node using a prefix 
+  left = prefix();
 
   tokentype = Token.token;
   // If we hit a semi colon, return the left node
@@ -158,3 +188,4 @@ struct ASTnode *funccall(void) {
 
   return tree;
 }
+

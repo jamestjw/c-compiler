@@ -1,5 +1,6 @@
 #include "defs.h"
 #include "gen.h"
+#include "misc.h"
 
 // Given two primitive types, return true if they are compatible.
 // Sets *left and *right to either 0 or A_WIDEN depending on whether
@@ -38,4 +39,34 @@ int type_compatible(int *left, int *right, int onlyright) {
   // Anything else is compatible
   *left = *right = 0;
   return 1;
+}
+
+int pointer_to(int type) {
+  int newtype;
+  switch (type) {
+    case P_VOID: newtype = P_VOIDPTR; break;
+    case P_CHAR: newtype = P_CHARPTR; break;
+    case P_INT: newtype = P_INTPTR; break;
+    case P_LONG: newtype = P_LONGPTR; break;
+    default:
+      fatald("Invalid pointer of type", type);
+      exit(1);
+  }
+
+  return newtype;
+}
+
+int value_at(int type) {
+  int newtype;
+  switch (type) {
+    case P_VOIDPTR: newtype = P_VOID; break;
+    case P_CHARPTR: newtype = P_CHAR; break;
+    case P_INTPTR: newtype = P_INT; break;
+    case P_LONGPTR: newtype = P_LONG; break;
+    default:
+      fatald("Unrecognised pointer to type", type);
+      exit(1);
+  }
+
+  return newtype;
 }

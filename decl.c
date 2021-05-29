@@ -5,29 +5,38 @@
 #include "stmt.h"
 #include "sym.h"
 #include "tree.h"
+#include "types.h"
 
 int Functionid;
 
 // Parse the current token and 
 // return a primitive type enum value
-int parse_type(int t) {
-  if (t == T_CHAR) return P_CHAR;
-  if (t == T_INT) return P_INT;
-  if (t == T_VOID) return P_VOID;
-  if (t == T_LONG) return P_LONG;
+int parse_type() {
+  int type;
 
-  fatald("Illegal type, token", t);
+  switch (Token.token) {
+    case T_VOID: type = P_VOID; break;
+    case T_CHAR: type = P_CHAR; break;
+    case T_INT:  type = P_INT;  break;
+    case T_LONG: type = P_LONG; break;
+    default:
+       fatald("Illegal type, token", Token.token);
+  }
 
-  // Unreachable (to silence compiler warnings)
-  return -1;
+  while (1) {
+    scan(&Token);
+    if (Token.token != T_STAR) break;
+    type = pointer_to(type);
+  }
+
+  return type;
 }
 
 // Parse variable declarations
 void var_declaration(void) {
   int id, type;
 
-  type = parse_type(Token.token);
-  scan(&Token);
+  type = parse_type();
 
   ident();
   id = addglob(Text, type, S_VARIABLE, 0);
@@ -40,9 +49,8 @@ struct ASTnode *function_declaration(void) {
   int nameslot, type, endlabel;
 
   // Get the type of the variable and the identifier
-  type = parse_type(Token.token);
+  type = parse_type();
 
-  scan(&Token);
   ident();
 
   // Get a label for the label that we place at the 

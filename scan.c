@@ -242,6 +242,14 @@ int scan(struct token *t) {
     case ')':
       t->token = T_RPAREN;
       break;
+    case '&':
+      if ((c = next()) == '&') {
+        t->token = T_LOGAND;
+      } else {
+        putback(c);
+        t->token = T_AMPER;
+      }
+      break;
     default:
       // If a digit was encountered, scan the entire number
       // in and store it in the token.

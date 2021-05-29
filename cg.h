@@ -45,3 +45,10 @@ int cgcall(int r, int id);
 // Return from a function call while returning a
 // value in the passed register
 void cgreturn(int reg, int id);
+// Generate code to load address of a global identifier
+// into a variable and returning the register that contains
+// it
+int cgaddress(int id);
+// Dereference a pointer and loading the value into the
+// same register
+int cgderef(int r, int type);
