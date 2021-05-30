@@ -12,14 +12,15 @@ struct token Token;
 // Operator precedence for each token
 // A bigger number indicates a higher precedence
 static int OpPrec[] = {
-  0, 60, 60,      // T_EOF, T_PLUS, T_MINUS
+  0, 10,          // T_EOF, T_ASSIGN
+  60, 60,         // T_PLUS, T_MINUS
   70, 70,         // T_STAR, T_SLASH
   30, 30,         // T_EQ, T_NE
   40, 40, 40, 40  // T_LT, T_GT, T_LE, T_GE
 };
 
 // Convert a token type into an AST operation (AST node type)
-int arithop(int tokentype) {
+int binastop(int tokentype) {
   // For tokens in this range, there is a 1-1 mapping between
   // token type and node type
   if (tokentype > T_EOF && tokentype < T_INTLIT) 
@@ -44,6 +45,13 @@ static int op_precedence(int tokentype) {
   }
 
   return prec;
+}
+
+// Returns true if token is a right-associative operator
+static int rightassoc(int tokentype) {
+  if (tokentype == T_ASSIGN)
+    return 1;
+  return 0;
 }
 
 // Parse a primary factor and return a node representing it
@@ -126,14 +134,21 @@ struct ASTnode *binexpr(int ptp) {
   left = prefix();
 
   tokentype = Token.token;
+
   // If we hit a semi colon, return the left node
-  if (tokentype == T_SEMI) return left;
   // Ensure that we have a binary operator
-  if (tokentype < T_PLUS || tokentype > T_GE) return left;
+  if ((tokentype == T_SEMI) || (tokentype < T_ASSIGN) || (tokentype > T_GE)) {
+    left->rvalue = 1;
+    return left;
+  }
 
   // While the current token's precedence is
-  // higher than that of the previous token
-  while(op_precedence(tokentype) > ptp) {
+  // higher than that of the previous token,
+  // or if the token is a right-associative
+  // operator whose precedence is equal to
+  // that of the previous token.
+  while((op_precedence(tokentype) > ptp) ||
+      (rightassoc(tokentype) && op_precedence(tokentype) == ptp)) {
     scan(&Token);
 
     // Recursively call this function to build a
@@ -144,26 +159,48 @@ struct ASTnode *binexpr(int ptp) {
     // Ensure that the two types are compatible by
     // trying to modify each tree to match the other
     // type.
-    ASTop = arithop(tokentype);
-    ltemp = modify_type(left, right->type, ASTop);
-    rtemp = modify_type(right, left->type, ASTop);
-    if (ltemp == NULL && rtemp == NULL)
-      fatal("Incompatible types in binary expression");
-    // When we successfully modify one tree to fit the
-    // other, we leave the other one as it is.
-    if (ltemp != NULL)
-      left = ltemp;
-    if (rtemp != NULL)
-      right = rtemp;
+    ASTop = binastop(tokentype);
 
+    // Assignment expressions are a special case
+    if (ASTop == A_ASSIGN) {
+      right->rvalue = 1;
+      // Ensure that right expression matches the left
+      right = modify_type(right, left->type, 0);
+      if (right == NULL)
+        fatal("Incompatible expression in assignment");
+
+     // Swap the left and right trees so that code for the
+     // right expression will be generated before the left
+     ltemp = left; left = right; right = ltemp;
+    } else {
+      // Since we are not doing an assignment, both trees should
+      // be rvalues
+      left->rvalue = right->rvalue = 1;
+
+      ltemp = modify_type(left, right->type, ASTop);
+      rtemp = modify_type(right, left->type, ASTop);
+      if (ltemp == NULL && rtemp == NULL)
+        fatal("Incompatible types in binary expression");
+      // When we successfully modify one tree to fit the
+      // other, we leave the other one as it is.
+      if (ltemp != NULL)
+        left = ltemp;
+      if (rtemp != NULL)
+        right = rtemp;
+    }
     // Join that subtree with the left node
     // The node contains an expression of the same type
     // as the left node.
-    left = mkastnode(arithop(tokentype), left->type, left, NULL, right, 0);
+    left = mkastnode(binastop(tokentype), left->type, left, NULL, right, 0);
 
     tokentype = Token.token;
-    if (tokentype == T_SEMI) return left;
-    if (tokentype < T_PLUS || tokentype > T_GE) return left;
+
+    // If we hit a semi colon, return the left node
+    // Ensure that we have a binary operator
+    if ((tokentype == T_SEMI) || (tokentype < T_ASSIGN) || (tokentype > T_GE)) {
+      left->rvalue = 1;
+      return left;
+    }
   }
 
   // When the next operator has a precedence equal or lower,

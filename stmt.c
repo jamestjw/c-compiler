@@ -11,57 +11,6 @@
 
 static struct ASTnode *single_statement(void);
 
-static struct ASTnode *print_statement(void) {
-  struct ASTnode *tree;
-
-  // Match a 'print' as the first token of a statement
-  match(T_PRINT, "print");
-
-  // Parse the following expression and 
-  // generate the assembly code
-  tree = binexpr(0);
- 
-  // Ensure that the two types are compatible
-  tree = modify_type(tree, P_INT, 0);
-  if (tree == NULL) fatal("Incompatible type to print");
-
-  // Make a print AST tree
-  tree = mkastunary(A_PRINT, P_NONE, tree, 0);
-
-  return tree;
-}
-
-static struct ASTnode *assignment_statement(void) {
-  struct ASTnode *left, *right, *tree;
-  int id;
-
-  // Match an identifier
-  ident();
-
-  // Check if this is a variable or a function call
-  // by checking if the next token is '('
-  if (Token.token == T_LPAREN) 
-    return funccall();
-
-  if ((id = findglob(Text)) == -1) {
-    fatals("Assigning to undeclared variable", Text);
-  }
-
-  right = mkastleaf(A_LVIDENT, Gsym[id].type, id);
-
-  match(T_ASSIGN, "=");
-
-  left = binexpr(0);
-
-  // Ensure that the two types are compatible
-  left = modify_type(left, right->type, 0);
-  if (left == NULL) fatal("Incompatible expression in assignment");
-
-  tree = mkastnode(A_ASSIGN, P_INT, left, NULL, right, 0);
-
-  return tree;
-}
-
 struct ASTnode *if_statement(void) {
   struct ASTnode *condAST, *trueAST, *falseAST = NULL;
 
@@ -175,8 +124,6 @@ static struct ASTnode *single_statement(void) {
   int type;
 
   switch (Token.token) {
-    case T_PRINT:
-      return print_statement();
     case T_CHAR:
     case T_INT:
     case T_LONG:
@@ -184,8 +131,6 @@ static struct ASTnode *single_statement(void) {
       ident();
       var_declaration(type);
       return NULL; // No AST here
-    case T_IDENT:
-      return assignment_statement();
     case T_IF:
       return if_statement();
     case T_WHILE:
@@ -195,8 +140,11 @@ static struct ASTnode *single_statement(void) {
     case T_RETURN:
       return return_statement();
     default:
-      fatald("Syntax error, token", Token.token);
-      return NULL;
+      // TODO: `2 + 3;` is treated as a valid statement
+      // for now, to fix soon.
+      //
+      // Handle assignment statements
+      return binexpr(0);
   }
 }
 
@@ -211,9 +159,8 @@ struct ASTnode *compound_statement(void) {
 
     // Some statements must be followed by a semicolon
     if (tree != NULL && 
-        (tree->op == A_PRINT || tree->op == A_ASSIGN ||
-         tree->op == A_RETURN || tree->op == A_FUNCCALL
-         ))
+        (tree->op == A_ASSIGN ||
+         tree->op == A_RETURN || tree->op == A_FUNCCALL))
       semi();
 
     if (tree != NULL) {

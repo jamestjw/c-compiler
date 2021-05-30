@@ -3,6 +3,7 @@
 #include "cg.h"
 #include "data.h"
 #include "gen.h"
+#include "misc.h"
 
 // Generate and return a new label number
 // each time this function is invoked.
@@ -141,18 +142,26 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
     case A_INTLIT:
       return cgloadint(n->v.intvalue, n->type);
     case A_IDENT:
-      return cgloadglob(n->v.id);
-    case A_LVIDENT:
-      return cgstorglob(reg, n->v.id);
+      // Load the value if it is an r-value
+      // or if it is a dereference.
+      if (n->rvalue || parentASTop == A_DEREF)
+        return cgloadglob(n->v.id);
+      else
+        return NOREG;
     case A_ASSIGN:
-      // Assignation should have been completed at the
-      // A_LVIDENT node
-      return rightreg;
-    case A_PRINT:
-      // Print left child's register and return nothing
-      genprintint(leftreg);
-      genfreeregs();
-      return NOREG;
+      // Handle differently based on whether we are storing
+      // to an identifier or through a pointer
+      switch (n->right->op) {
+        case A_IDENT:
+          return cgstorglob(leftreg, n->right->v.id);
+        case A_DEREF:
+          // rightreg should contain the pointer to the
+          // identifier to store to.
+          return cgstorderef(leftreg, rightreg, n->right->type);
+        default:
+          fatald("Can't assign in genAST for op", n->op);
+          break;
+      }
     case A_WIDEN:
       return cgwiden(leftreg, n->left->type, n->type);
     case A_RETURN:
@@ -163,7 +172,13 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
     case A_ADDR:
       return cgaddress(n->v.id);
     case A_DEREF:
-      return cgderef(leftreg, n->left->type);
+      // If it is a r-value, dereference and load the value
+      // into a register and return it
+      if (n->rvalue)
+        return cgderef(leftreg, n->left->type);
+      else
+        // Else return the pointer to be used as an lvalue
+        return leftreg;
     case A_SCALE:
       switch (n->v.size) {
         // Use bitshifts for powers of 2

@@ -138,10 +138,6 @@ static int keyword(char *s) {
       if (!strcmp(s, "long"))
         return T_LONG;
       break;
-    case 'p':
-      if (!strcmp(s, "print")) 
-        return T_PRINT;
-      break;
     case 'r':
       if (!strcmp(s, "return")) 
         return T_RETURN;

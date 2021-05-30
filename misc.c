@@ -10,7 +10,7 @@ void match(int t, char *what) {
   if (Token.token == t) {
     scan(&Token);
   } else {
-    printf("%s expected on line %d\n", what, Line);
+    printf("%s expected on line %d, found %d instead\n", what, Line, Token. token);
     exit(1);
   }
 }

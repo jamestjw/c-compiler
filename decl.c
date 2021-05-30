@@ -72,10 +72,10 @@ struct ASTnode *function_declaration(int type) {
   // Get a label for the label that we place at the 
   // end of the function
   endlabel = genlabel();
-
   nameslot = addglob(Text, type, S_FUNCTION, endlabel);
   Functionid = nameslot;
   // TODO: Support function with parameters
+
   lparen();
   rparen();
 
@@ -109,6 +109,12 @@ void global_declarations(void) {
     if (Token.token == T_LPAREN) {
       // Dealing with a function declaration
       tree = function_declaration(type);
+
+      if (O_dumpAST) {
+        dumpAST(tree, NOLABEL, 0);
+        fprintf(stdout, "\n\n");
+      }
+
       genAST(tree, NOREG, 0);
     } else {
       // Dealing with variable declaration
