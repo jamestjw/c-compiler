@@ -223,9 +223,17 @@ void cgglobsym(int id) {
   int typesize;
 
   typesize = cgprimsize(Gsym[id].type);
-
-  // e.g. .comm var_name,8,8
-  fprintf(Outfile, "\t.comm\t%s,%d,%d\n", Gsym[id].name, typesize, typesize);
+   
+  // .data
+  // .globl varname
+  // varname:   .long   0
+  fprintf(Outfile, "\t.data\n" "\t.globl\t%s\n", Gsym[id].name);
+  switch (typesize) {
+    case 1: fprintf(Outfile, "%s:\t.byte\t0\n", Gsym[id].name); break;
+    case 4: fprintf(Outfile, "%s:\t.long\t0\n", Gsym[id].name); break;
+    case 8: fprintf(Outfile, "%s:\t.quad\t0\n", Gsym[id].name); break;
+    default: fatald("Unknown typesize in cgglobsym", typesize);
+  }
 }
 
 int cgcompare_and_set(int ASTop, int r1, int r2) {
@@ -345,3 +353,8 @@ int cgderef(int r, int type) {
   return r;
 }
 
+int cgshlconst(int r, int val) {
+  // salq $2, %r10
+  fprintf(Outfile, "\tsalq\t$%d, %s\n", val, reglist[r]);
+  return r;
+}

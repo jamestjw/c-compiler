@@ -52,3 +52,6 @@ int cgaddress(int id);
 // Dereference a pointer and loading the value into the
 // same register
 int cgderef(int r, int type);
+// Shift bits to the left by a constant and return the
+// register containing the result
+int cgshlconst(int r, int val);

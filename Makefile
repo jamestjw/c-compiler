@@ -17,12 +17,12 @@ test: comp1 tests/runtests
 armtest: comp1arm tests/runtests
 	(cd tests; chmod +x runtests; ./runtests)
 
-test15: comp1 tests/input15.c lib/printint.c
-	./comp1 tests/input15.c
+test16: comp1 tests/input16.c lib/printint.c
+	./comp1 tests/input16.c
 	cc -o out out.s lib/printint.c
 	./out
 
-armtest15: comp1arm tests/input15.c lib/printint.c
-	./comp1 tests/input15.c
+armtest16: comp1arm tests/input16.c lib/printint.c
+	./comp1 tests/input16.c
 	cc -o out out.s lib/printint.c
 	./out

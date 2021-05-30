@@ -43,7 +43,7 @@ enum {
   A_INTLIT,
   A_IDENT, A_LVIDENT, A_ASSIGN, A_PRINT, A_GLUE, 
   A_IF, A_WHILE, A_FUNCTION, A_WIDEN, A_RETURN,
-  A_FUNCCALL, A_ADDR, A_DEREF,
+  A_FUNCCALL, A_ADDR, A_DEREF, A_SCALE,
 };
 
 // AST structure
@@ -56,6 +56,7 @@ struct ASTnode {
   union {
     int intvalue; // Integer value for A_INTLIT
     int id;       // Symbol slot number for A_IDENT
+    int size;     // Size to scale by for A_SCALE
   } v;
 };
 

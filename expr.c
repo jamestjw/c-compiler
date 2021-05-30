@@ -118,7 +118,8 @@ struct ASTnode *prefix(void) {
 // Parameter ptp is the precedence of the previous token
 struct ASTnode *binexpr(int ptp) {
   struct ASTnode *left, *right;
-  int lefttype, righttype;
+  struct ASTnode *ltemp, *rtemp;
+  int ASTop;
   int tokentype;
 
   // Build the left node using a prefix 
@@ -140,17 +141,20 @@ struct ASTnode *binexpr(int ptp) {
     // current token
     right = binexpr(OpPrec[tokentype]);
 
-    // Ensure that the two types are compatible
-    lefttype = left->type;
-    righttype = right->type;
-    if (!type_compatible(&lefttype, &righttype, 0))
-      fatal("Incompatible types");
-
-    // Widen either side if required, type vars are A_WIDEN
-    if (lefttype)
-      left = mkastunary(lefttype, right->type, left, 0);
-    if (righttype)
-      right = mkastunary(righttype, left->type, right, 0);
+    // Ensure that the two types are compatible by
+    // trying to modify each tree to match the other
+    // type.
+    ASTop = arithop(tokentype);
+    ltemp = modify_type(left, right->type, ASTop);
+    rtemp = modify_type(right, left->type, ASTop);
+    if (ltemp == NULL && rtemp == NULL)
+      fatal("Incompatible types in binary expression");
+    // When we successfully modify one tree to fit the
+    // other, we leave the other one as it is.
+    if (ltemp != NULL)
+      left = ltemp;
+    if (rtemp != NULL)
+      right = rtemp;
 
     // Join that subtree with the left node
     // The node contains an expression of the same type
