@@ -250,6 +250,9 @@ int scan(struct token *t) {
         t->token = T_AMPER;
       }
       break;
+    case ',':
+      t->token = T_COMMA;
+      break;
     default:
       // If a digit was encountered, scan the entire number
       // in and store it in the token.

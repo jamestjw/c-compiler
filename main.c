@@ -27,8 +27,6 @@ static void usage(char *prog) {
 }
 
 int main(int argc, char* argv[]) {
-  struct ASTnode *tree;
-
   // Print help message with proper way to call
   // this program and exit.
   if (argc != 2) usage(argv[0]); 
@@ -51,15 +49,9 @@ int main(int argc, char* argv[]) {
 
   scan(&Token);
   genpreamble();
-
-  while (1) {
-    tree = function_declaration();
-    genAST(tree, NOREG, 0);
-    if (Token.token == T_EOF)
-      break;
-  }
-  
+  global_declarations(); 
   genpostamble();
+
   fclose(Outfile);
   exit(0);
 }

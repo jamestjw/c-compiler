@@ -28,7 +28,7 @@ enum {
   // Structural tokens
   T_INTLIT, T_SEMI, T_ASSIGN, T_IDENT,
   T_LBRACE, T_RBRACE, T_LPAREN, T_RPAREN,
-  T_AMPER, T_LOGAND,
+  T_AMPER, T_LOGAND, T_COMMA,
 
   // Other keywords
   T_PRINT, T_IF, T_ELSE, T_WHILE,

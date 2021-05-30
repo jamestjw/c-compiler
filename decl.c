@@ -32,26 +32,42 @@ int parse_type() {
   return type;
 }
 
-// Parse variable declarations
-void var_declaration(void) {
-  int id, type;
+// Parse the declaration of a list of
+// variables. The identifier should have
+// been scanned prior to calling this function.
+void var_declaration(int type) {
+  int id;
+  
+  while (1) {
+    id = addglob(Text, type, S_VARIABLE, 0);
+    genglobsym(id);
 
-  type = parse_type();
+    // If the next token is a semicolon, we 
+    // consume it and we have come to the end
+    // of the declaration.
+    if (Token.token == T_SEMI) {
+      scan(&Token);
+      return;
+    }
 
-  ident();
-  id = addglob(Text, type, S_VARIABLE, 0);
-  genglobsym(id);
-  semi();
+    // If the next token is a comma, consume it
+    // and proceed to the next iteration of the
+    // loop to continue parsing the declaration.
+    if (Token.token == T_COMMA) {
+      scan(&Token);
+      ident();
+      continue;
+    }
+
+    fatal("Missing ',' or ';' after identifier in variable declaration");
+  }
 }
 
-struct ASTnode *function_declaration(void) {
+// The identifier should already have been consumed
+// prior to calling this function.
+struct ASTnode *function_declaration(int type) {
   struct ASTnode *tree, *finalstmt;
-  int nameslot, type, endlabel;
-
-  // Get the type of the variable and the identifier
-  type = parse_type();
-
-  ident();
+  int nameslot, endlabel;
 
   // Get a label for the label that we place at the 
   // end of the function
@@ -76,4 +92,30 @@ struct ASTnode *function_declaration(void) {
   }
 
   return mkastunary(A_FUNCTION, P_VOID, tree, nameslot);
+}
+
+void global_declarations(void) {
+  struct ASTnode *tree;
+  int type;
+
+  while (1) {
+    // We have to first parse the type and identifier
+    // into order to tell if we are dealing with a 
+    // function declaration or a variable declaration.
+    
+    type = parse_type();
+    ident();
+
+    if (Token.token == T_LPAREN) {
+      // Dealing with a function declaration
+      tree = function_declaration(type);
+      genAST(tree, NOREG, 0);
+    } else {
+      // Dealing with variable declaration
+      var_declaration(type);
+    }
+
+    if (Token.token == T_EOF)
+      break;
+  }
 }
