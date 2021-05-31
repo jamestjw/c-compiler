@@ -143,7 +143,6 @@ void cgfuncpostamble(int id) {
 }
 
 void cgpostamble() {
-  printf("cgpostamble\n");
   // Handle global variables
   //
   // .L2:
@@ -413,3 +412,21 @@ int cgshlconst(int r, int val) {
   fprintf(Outfile, "\tlsl\t%s, %s, #%d\n", reglist[r], reglist[r], val);
   return r;
 }
+
+int cgstorderef(int r1, int r2, int type) {
+  // str r4, [r5]
+  switch (type) {
+    case P_CHAR:
+      fprintf(Outfile, "\tstrb\t%s, [%s]\n", reglist[r1], reglist[r2]);
+      break;
+    case P_INT:
+    case P_LONG:
+      fprintf(Outfile, "\tstr\t%s, [%s]\n", reglist[r1], reglist[r2]);
+      break;
+    default:
+      fatald("Can't cgstorderef on type", type);
+  }
+
+  return r1;
+}
+

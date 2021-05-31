@@ -249,6 +249,12 @@ int scan(struct token *t) {
     case ',':
       t->token = T_COMMA;
       break;
+    case '[':
+      t->token = T_LBRACKET;
+      break;
+    case ']':
+      t->token = T_RBRACKET;
+      break;
     default:
       // If a digit was encountered, scan the entire number
       // in and store it in the token.

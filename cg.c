@@ -227,13 +227,19 @@ void cgglobsym(int id) {
   // .data
   // .globl varname
   // varname:   .long   0
+  //            .long   0
+  //            .long   0
   fprintf(Outfile, "\t.data\n" "\t.globl\t%s\n", Gsym[id].name);
-  switch (typesize) {
-    case 1: fprintf(Outfile, "%s:\t.byte\t0\n", Gsym[id].name); break;
-    case 4: fprintf(Outfile, "%s:\t.long\t0\n", Gsym[id].name); break;
-    case 8: fprintf(Outfile, "%s:\t.quad\t0\n", Gsym[id].name); break;
-    default: fatald("Unknown typesize in cgglobsym", typesize);
-  }
+  fprintf(Outfile, "%s:", Gsym[id].name);
+
+  for (int i = 0; i < Gsym[id].size; i++) {
+     switch (typesize) {
+       case 1: fprintf(Outfile, "\t.byte\t0\n"); break; 
+       case 4: fprintf(Outfile, "\t.long\t0\n"); break; 
+       case 8: fprintf(Outfile, "\t.quad\t0\n"); break; 
+       default: fatald("Unknown typesize in cgglobsym", typesize);       
+     } 
+ }                                                                    
 }
 
 int cgcompare_and_set(int ASTop, int r1, int r2) {

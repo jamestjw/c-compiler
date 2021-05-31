@@ -72,8 +72,6 @@ int value_at(int type) {
   return newtype;
 }
 
-// Return true if the type is an integer compatible 
-// type.
 int inttype(int type) {
   if (type == P_CHAR || type == P_INT || type == P_LONG)
     return 1;

@@ -37,29 +37,50 @@ int parse_type() {
 // been scanned prior to calling this function.
 void var_declaration(int type) {
   int id;
-  
-  while (1) {
-    id = addglob(Text, type, S_VARIABLE, 0);
-    genglobsym(id);
+ 
+  // Handle `int list[5];`
+  if (Token.token == T_LBRACKET) {
+    // Consume the '[' 
+    scan(&Token);
 
-    // If the next token is a semicolon, we 
-    // consume it and we have come to the end
-    // of the declaration.
-    if (Token.token == T_SEMI) {
+    // Check for array size
+    // TODO: Must provide size for now
+    if (Token.token == T_INTLIT) {
+      id = addglob(Text, pointer_to(type), S_ARRAY, 0, Token.intvalue);
+      genglobsym(id);
+
+      // Consume int literal
       scan(&Token);
+      match(T_RBRACKET, "]");
+      semi();
       return;
+    } else {
+      fatal("Missing array size");
     }
-
-    // If the next token is a comma, consume it
-    // and proceed to the next iteration of the
-    // loop to continue parsing the declaration.
-    if (Token.token == T_COMMA) {
-      scan(&Token);
-      ident();
-      continue;
+  } else { // Handle `int a,b,c;`
+    while (1) {
+      id = addglob(Text, type, S_VARIABLE, 0, 1);
+      genglobsym(id);
+  
+      // If the next token is a semicolon, we 
+      // consume it and we have come to the end
+      // of the declaration.
+      if (Token.token == T_SEMI) {
+        scan(&Token);
+        return;
+      }
+  
+      // If the next token is a comma, consume it
+      // and proceed to the next iteration of the
+      // loop to continue parsing the declaration.
+      if (Token.token == T_COMMA) {
+        scan(&Token);
+        ident();
+        continue;
+      }
+  
+      fatal("Missing ',' or ';' after identifier in variable declaration");
     }
-
-    fatal("Missing ',' or ';' after identifier in variable declaration");
   }
 }
 
@@ -72,7 +93,7 @@ struct ASTnode *function_declaration(int type) {
   // Get a label for the label that we place at the 
   // end of the function
   endlabel = genlabel();
-  nameslot = addglob(Text, type, S_FUNCTION, endlabel);
+  nameslot = addglob(Text, type, S_FUNCTION, endlabel, 0);
   Functionid = nameslot;
   // TODO: Support function with parameters
 

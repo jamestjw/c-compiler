@@ -39,6 +39,10 @@ int binastop(int tokentype) {
 // that expectation is not met.
 static int op_precedence(int tokentype) {
   int prec = OpPrec[tokentype];
+  
+  if (tokentype >= T_VOID)
+    fatald("Token with no precedence in op_precedence", tokentype);
+
   if (prec == 0) {
     fprintf(stderr, "syntax error on line %d token %d\n", Line, tokentype);
     exit(1);
@@ -52,6 +56,40 @@ static int rightassoc(int tokentype) {
   if (tokentype == T_ASSIGN)
     return 1;
   return 0;
+}
+
+// Before invoking this function, the identifier
+// should have already been consumed. The current
+// token should be pointing at a '['
+static struct ASTnode *array_access(void) {
+  struct ASTnode *left, *right;
+  int id;
+
+  // Ensure that such an identifier exists and points to
+  // an array
+  if ((id = findglob(Text)) == -1 || Gsym[id].stype != S_ARRAY) {
+    fatals("Undeclared array", Text);
+  }
+
+  left = mkastleaf(A_ADDR, Gsym[id].type, id);
+
+  // Consume the '['
+  scan(&Token);
+
+  right = binexpr(0);
+
+  match(T_RBRACKET, "]");
+
+  if (!inttype(right->type))
+    fatal("Array index is not of integer type");
+
+  // Scale the index by the size of the element's type
+  right = modify_type(right, left->type, A_ADD);
+
+  // Add offset to base of the array and dereference it
+  left = mkastnode(A_ADD, Gsym[id].type, left, NULL, right, 0);
+  left = mkastunary(A_DEREF, value_at(left->type), left, 0);
+  return left;
 }
 
 // Parse a primary factor and return a node representing it
@@ -69,12 +107,17 @@ static struct ASTnode *primary(void) {
         n = mkastleaf(A_INTLIT, P_INT, Token.intvalue);
       break;
     case T_IDENT:
-      // In order to know if this is a variable or a function
-      // call, we need to look at the subsequent token
+      // In order to know if this is a variable, a function
+      // call or an array index so  we need to look at 
+      // the subsequent token
       scan(&Token);
 
       if (Token.token == T_LPAREN)
         return funccall();
+
+      if (Token.token == T_LBRACKET) {
+        return array_access();
+      }
 
       // Reject the new token if we did not encounter a left parenthesis
       reject_token(&Token);
@@ -84,6 +127,15 @@ static struct ASTnode *primary(void) {
         fatals("Unknown variable", Text);
       n = mkastleaf(A_IDENT, Gsym[id].type, id);
       break;
+    case T_LPAREN:
+      // Consume the '('
+      scan(&Token);
+      // Parse the expression
+      n = binexpr(0);
+      // Match a ')'
+      rparen();
+
+      return n;
     default:
       fatald("Syntax error, token", Token.token);
   }

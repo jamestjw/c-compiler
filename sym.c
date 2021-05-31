@@ -30,7 +30,7 @@ static int newglob(void) {
   return p;
 }
 
-int addglob(char *name, int type, int stype, int endlabel) {
+int addglob(char *name, int type, int stype, int endlabel, int size) {
   int y;
 
   // If the symbol is already in the table, just return it
@@ -44,6 +44,7 @@ int addglob(char *name, int type, int stype, int endlabel) {
   Gsym[y].type = type;
   Gsym[y].stype = stype;
   Gsym[y].endlabel = endlabel;
+  Gsym[y].size = size;
 
   return y;
 }
