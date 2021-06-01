@@ -9,3 +9,6 @@ int genAST(struct ASTnode *n, int reg, int parentASTop);
 int genprimsize(int type);
 // Generate an ID for a label
 int genlabel(void);
+// Generate code for a string literal and return the
+// label for it
+int genglobstr(char *strvalue);

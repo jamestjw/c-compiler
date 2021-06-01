@@ -57,3 +57,8 @@ int cgderef(int r, int type);
 int cgshlconst(int r, int val);
 // Store a value through a dereferenced pointer
 int cgstorderef(int r1, int r2, int type);
+// Generate code for a string literal to a given label
+void cgglobstr(int l, char *strvalue);
+// Return register containing pointer to a string
+// literal of this ID
+int cgloadglobstr(int id);

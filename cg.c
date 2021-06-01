@@ -383,3 +383,21 @@ int cgstorderef(int r1, int r2, int type) {
 
   return r1;
 }
+
+void cgglobstr(int l, char *strvalue) {
+  char *cptr;
+  cglabel(l);
+  
+  // Loop ends when we hit \0
+  for (cptr = strvalue; *cptr; cptr++) {
+    fprintf(Outfile, "\t.byte\t%d\n", *cptr);
+  }
+  fprintf(Outfile, "\t.byte\t0\n");
+}
+
+int cgloadglobstr(int id) {
+  int r = alloc_register();
+  // leaq L2(%%rip), %r10
+  fprintf(Outfile, "\tleaq\tL%d(\%%rip), %s\n", id, reglist[r]);
+  return r;
+}

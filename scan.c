@@ -156,6 +156,49 @@ static int keyword(char *s) {
   return 0;
 }
 
+// Return the next character from a character
+// or string literal
+static int scanch(void) {
+  int c;
+  
+  c = next();
+  
+  // Handle escape sequences
+  if (c == '\\') {
+    switch (c = next()) {
+        case 'a':  return '\a';
+        case 'b':  return '\b';
+        case 'f':  return '\f';
+        case 'n':  return '\n';
+        case 'r':  return '\r';
+        case 't':  return '\t';
+        case 'v':  return '\v';
+        case '\\': return '\\';
+        case '"':  return '"' ;
+        case '\'': return '\'';
+        default:
+          fatalc("unknown escape sequence", c);
+    }
+  }
+  return c;
+}
+
+static int scanstr(char *buf) {
+  int i, c;
+
+  for (i = 0; i < TEXTLEN - 1; i++) {
+    if ((c = scanch()) == '"') {
+      // Null terminate the string
+      buf[i] = 0;
+      return i;
+    }
+    buf[i] = c;
+  }
+
+  fatal("String literal too long");
+  return 0;
+}
+
 void reject_token(struct token *t) {
   if (Rejtoken != NULL)
     fatal("Can't reject token twice");
@@ -254,6 +297,17 @@ int scan(struct token *t) {
       break;
     case ']':
       t->token = T_RBRACKET;
+      break;
+    // Handle character literals
+    case '\'':
+      t->intvalue = scanch();
+      t->token = T_INTLIT;
+      if (next() != '\'')
+        fatal("Expected \"'\" at the end of char literal");
+      break;
+    case '"':
+      scanstr(Text);
+      t->token = T_STRLIT;
       break;
     default:
       // If a digit was encountered, scan the entire number

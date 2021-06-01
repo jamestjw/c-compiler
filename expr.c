@@ -1,5 +1,6 @@
 #include "data.h"
 #include "expr.h"
+#include "gen.h"
 #include "misc.h"
 #include "scan.h"
 #include "sym.h"
@@ -105,6 +106,10 @@ static struct ASTnode *primary(void) {
         n = mkastleaf(A_INTLIT, P_CHAR, Token.intvalue);
       else
         n = mkastleaf(A_INTLIT, P_INT, Token.intvalue);
+      break;
+    case T_STRLIT:
+      id = genglobstr(Text);
+      n = mkastleaf(A_STRLIT, P_CHARPTR, id);
       break;
     case T_IDENT:
       // In order to know if this is a variable, a function
