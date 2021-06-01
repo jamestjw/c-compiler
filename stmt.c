@@ -21,10 +21,9 @@ struct ASTnode *if_statement(void) {
   // Match the condition expression and the subsequent ')'
   condAST = binexpr(0);
 
-  // TODO: Handle cases where the expression does not involve
-  // a conditional operator
   if (condAST->op < A_EQ || condAST->op > A_GE)
-    fatal("Bad comparison operator in if statement");
+    // Convert any integer that is not a zero to a 1
+    condAST = mkastunary(A_TOBOOL, condAST->type, condAST, 0);
   rparen();
 
   // AST for the compound statement for the TRUE clause
@@ -78,7 +77,7 @@ static struct ASTnode *for_statement(void) {
   // Parse the condition and the ';'
   condAST = binexpr(0);
   if (condAST->op < A_EQ || condAST->op > A_GE)
-    fatal("Bad comparison operator in 'for' statement");
+    condAST = mkastunary(A_TOBOOL, condAST->type, condAST, 0);
   semi();
 
   // Get the post_op statement and the ')'

@@ -224,11 +224,21 @@ int scan(struct token *t) {
       t->token = T_EOF;
       return 0;
     case '+':
-      t->token = T_PLUS;
+      if ((c = next()) == '+') {
+	      t->token = T_INC;
+      } else {
+	      putback(c);
+	      t->token = T_PLUS;
+      }
       break;
     case '-':
-      t->token = T_MINUS;
-      break;
+      if ((c = next()) == '-') {
+	      t->token = T_DEC;
+      } else {
+	      putback(c);
+	      t->token = T_MINUS;
+      }
+      break;    
     case '*':
       t->token = T_STAR;
       break;
@@ -250,12 +260,15 @@ int scan(struct token *t) {
       if ((c = next()) == '=') {
         t->token = T_NE;
       } else {
-        fatalc("Unrecognised character", c);
+        putback(c);
+        t->token = T_LOGNOT;
       }
       break;
     case '<':
       if ((c = next()) == '=') {
         t->token = T_LE;
+      } else if (c == '<') {
+        t->token = T_LSHIFT;
       } else {
         putback(c);
         t->token = T_LT;
@@ -264,6 +277,8 @@ int scan(struct token *t) {
     case '>':
       if ((c = next()) == '=') {
         t->token = T_GE;
+      } else if (c == '>') {
+        t->token = T_RSHIFT;
       } else {
         putback(c);
         t->token = T_GT;
@@ -297,6 +312,20 @@ int scan(struct token *t) {
       break;
     case ']':
       t->token = T_RBRACKET;
+      break;
+    case '|':
+      if ((c = next()) == '|') {
+        t->token = T_LOGOR;
+      } else {
+        putback(c);
+        t->token = T_OR;
+      }
+      break;
+    case '^':
+      t->token = T_XOR;
+      break;
+    case '~':
+      t->token = T_INVERT;
       break;
     // Handle character literals
     case '\'':

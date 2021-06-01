@@ -9,8 +9,10 @@ int cgadd(int r1, int r2);
 int cgsub(int r1, int r2);
 int cgmul(int r1, int r2);
 int cgdiv(int r1, int r2);
-// Load a value from a global symbol
-int cgloadglob(int id);
+// Load a value from a global symbol. If the 
+// operation is a pre/post-increment, also
+// perform this action
+int cgloadglob(int id, int op);
 // Load a value to a global symbol
 int cgstorglob(int r, int id);
 
@@ -62,3 +64,12 @@ void cgglobstr(int l, char *strvalue);
 // Return register containing pointer to a string
 // literal of this ID
 int cgloadglobstr(int id);
+int cgand(int r1, int r2);
+int cgor(int r1, int r2);
+int cgxor(int r1, int r2);
+int cgnegate(int r);
+int cginvert(int r);
+int cgshl(int r1, int r2);
+int cgshr(int r1, int r2);
+int cglognot(int r);
+int cgboolean(int r, int op, int label);

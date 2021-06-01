@@ -168,24 +168,67 @@ void cgprintint(int r) {
   free_register(r);
 }
 
-int cgloadglob(int id) {
+int cgloadglob(int id, int op) {
+  char *name = Gsym[id].name;
   int r = alloc_register();
 
   switch (Gsym[id].type) {
     case P_CHAR:
+      if (op == A_PREINC)
+        // incb identifier(%rip)
+        fprintf(Outfile, "\tincb\t%s(\%%rip)\n", name);
+      if (op == A_PREDEC)
+        // decb identifier(%rip)
+        fprintf(Outfile, "\tdecb\t%s(\%%rip)\n", name);
       // e.g. movzbq identifier(%rip), %r8
-      fprintf(Outfile, "\tmovzbq\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
+
+      fprintf(Outfile, "\tmovzbq\t%s(\%%rip), %s\n", name, reglist[r]);
+
+      if (op == A_POSTINC)
+        // incb identifier(%rip)
+        fprintf(Outfile, "\tincb\t%s(\%%rip)\n", name);
+      if (op == A_POSTDEC)
+        // decb identifier(%rip)
+        fprintf(Outfile, "\tdecb\t%s(\%%rip)\n", name);
       break;
     case P_INT:
+      if (op == A_PREINC)
+        // incl identifier(%rip)
+        fprintf(Outfile, "\tincl\t%s(\%%rip)\n", name);
+      if (op == A_PREDEC)
+        // decl identifier(%rip)
+        fprintf(Outfile, "\tdecl\t%s(\%%rip)\n", name);
       // e.g. movzbl identifier(%rip), %r8
-      fprintf(Outfile, "\tmovzbl\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
+
+      fprintf(Outfile, "\tmovslq\t%s(\%%rip), %s\n", name, reglist[r]);
+
+      if (op == A_POSTINC)
+        // incl identifier(%rip)
+        fprintf(Outfile, "\tincl\t%s(\%%rip)\n", name);
+      if (op == A_POSTDEC)
+        // decl identifier(%rip)
+        fprintf(Outfile, "\tdecl\t%s(\%%rip)\n", name);
       break;
     case P_LONG:
     case P_CHARPTR:
     case P_INTPTR:
     case P_LONGPTR:
+      if (op == A_PREINC)
+        // incq identifier(%rip)
+        fprintf(Outfile, "\tincq\t%s(\%%rip)\n", name);
+      if (op == A_PREDEC)
+        // decq identifier(%rip)
+        fprintf(Outfile, "\tdecq\t%s(\%%rip)\n", name);
       // e.g. movq identifier(%rip), %r8
-      fprintf(Outfile, "\tmovq\t%s(\%%rip), %s\n", Gsym[id].name, reglist[r]);
+
+      fprintf(Outfile, "\tmovq\t%s(\%%rip), %s\n", name, reglist[r]);
+
+      if (op == A_POSTINC)
+        // incq identifier(%rip)
+        fprintf(Outfile, "\tincq\t%s(\%%rip)\n", name);
+      if (op == A_POSTDEC)
+        // decq identifier(%rip)
+        fprintf(Outfile, "\tdecq\t%s(\%%rip)\n", name);
       break;
     default:
       fatald("Bad type in cgloadglob", Gsym[id].type);
@@ -399,5 +442,91 @@ int cgloadglobstr(int id) {
   int r = alloc_register();
   // leaq L2(%%rip), %r10
   fprintf(Outfile, "\tleaq\tL%d(\%%rip), %s\n", id, reglist[r]);
+  return r;
+}
+
+int cgand(int r1, int r2) {
+  // andq %r9, %r10
+  fprintf(Outfile, "\tandq\t%s, %s\n", reglist[r1], reglist[r2]);
+  free_register(r1);
+  return r2;
+}
+
+int cgor(int r1, int r2) {
+  // orq %r9, %r10
+  fprintf(Outfile, "\torq\t%s, %s\n", reglist[r1], reglist[r2]);
+  free_register(r1);
+  return r2;
+}
+
+int cgxor(int r1, int r2) {
+  // xorq %r9, %r10
+  fprintf(Outfile, "\txorq\t%s, %s\n", reglist[r1], reglist[r2]);
+  free_register(r1); 
+  return r2;
+}
+
+// Negate a register's value
+int cgnegate(int r) {
+  // negq %r10
+  fprintf(Outfile, "\tnegq\t%s\n", reglist[r]);
+  return r;
+}
+
+// Invert a register's value
+int cginvert(int r) {
+  // notq %r10
+  fprintf(Outfile, "\tnotq\t%s\n", reglist[r]); 
+  return r;
+}
+
+int cgshl(int r1, int r2) {
+  // Amount to shift by has to be loaded in %cl
+  fprintf(Outfile, "\tmovb\t%s, %%cl\n", breglist[r2]);
+  fprintf(Outfile, "\tshlq\t%%cl, %s\n", reglist[r1]);
+
+  free_register(r2);
+  return r1;
+}
+
+int cgshr(int r1, int r2) {
+  // Amount to shift by has to be loaded in %cl
+  fprintf(Outfile, "\tmovb\t%s, %%cl\n", breglist[r2]);
+  fprintf(Outfile, "\tshrq\t%%cl, %s\n", reglist[r1]);
+
+  free_register(r2);
+  return r1;
+}
+
+int cglognot(int r) {
+  // AND the register with itself to set the zero
+  // flag 
+  //    test %r9, %r9
+  //
+  // Set register to 1 if the zero flag is set
+  //    sete %r9b
+  //
+  // Move result to final destination
+  //    movzbq %r9b, %r9
+  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r], reglist[r]);
+  fprintf(Outfile, "\tsete\t%s\n", breglist[r]);
+  fprintf(Outfile, "\tmovzbq\t%s, %s\n", breglist[r], reglist[r]);
+
+  return r;
+}
+
+int cgboolean(int r, int op, int label) {
+  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r], reglist[r]);
+  if (op == A_IF || op == A_WHILE)
+    // je L2
+    fprintf(Outfile, "\tje\tL%d\n", label);
+  else {
+    // Set if test is not-zero
+    // setnz %r9b
+    // movzbq %r9b, %r9
+    fprintf(Outfile, "\tsetnz\t%s\n", breglist[r]);
+    fprintf(Outfile, "\tmovzbq\t%s, %s\n", breglist[r], reglist[r]);
+  }
+
   return r;
 }

@@ -89,7 +89,7 @@ static int genWHILE(struct ASTnode *n) {
 //       child, this allows us to pass results from the evaluation
 //       of the left child to aid the evaluation of the right child.
 // parentASTop - Operator of the parent AST node      
-int genAST(struct ASTnode *n, int reg, int parentASTop) {
+int genAST(struct ASTnode *n, int label, int parentASTop) {
   // Registers containing the results of evaluating
   // the left and right child nodes
   int leftreg, rightreg;
@@ -115,7 +115,7 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
   }
 
   if (n->left) leftreg = genAST(n->left, NOREG, n->op);
-  if (n->right) rightreg = genAST(n->right, leftreg, n->op);
+  if (n->right) rightreg = genAST(n->right, NOREG, n->op);
 
   switch (n->op) {
     case A_ADD:
@@ -136,7 +136,7 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
       // compare and jump, otherwise compare registers
       // and set to either 0 or 1
       if (parentASTop == A_IF || parentASTop == A_WHILE)
-        return cgcompare_and_jump(n->op, leftreg, rightreg, reg);
+        return cgcompare_and_jump(n->op, leftreg, rightreg, label);
       else
         return cgcompare_and_set(n->op, leftreg, rightreg);
     case A_INTLIT:
@@ -145,7 +145,7 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
       // Load the value if it is an r-value
       // or if it is a dereference.
       if (n->rvalue || parentASTop == A_DEREF)
-        return cgloadglob(n->v.id);
+        return cgloadglob(n->v.id, n->op);
       else
         return NOREG;
     case A_ASSIGN:
@@ -194,6 +194,30 @@ int genAST(struct ASTnode *n, int reg, int parentASTop) {
       }
     case A_STRLIT:
       return cgloadglobstr(n->v.id);
+    case A_AND:
+      return cgand(leftreg, rightreg);
+    case A_OR:
+      return cgor(leftreg, rightreg);
+    case A_XOR:
+      return cgxor(leftreg, rightreg);
+    case A_LSHIFT:
+      return cgshl(leftreg, rightreg);
+    case A_RSHIFT:
+      return cgshr(leftreg, rightreg);
+    case A_POSTINC:
+    case A_POSTDEC:
+      return cgloadglob(n->v.id, n->op);
+    case A_PREINC:
+    case A_PREDEC:
+      return cgloadglob(n->left->v.id, n->op);
+    case A_NEGATE:
+      return cgnegate(leftreg);
+    case A_INVERT:
+      return cginvert(leftreg);
+    case A_LOGNOT:
+      return cglognot(leftreg);
+    case A_TOBOOL:
+      return cgboolean(leftreg, parentASTop, label);
     default:
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);
