@@ -145,10 +145,10 @@ int genAST(struct ASTnode *n, int label, int parentASTop) {
       // Load the value if it is an r-value
       // or if it is a dereference.
       if (n->rvalue || parentASTop == A_DEREF) {
-        if (Symtable[n->v.id].class == C_LOCAL) {
-          return cgloadlocal(n->v.id, n->op);
-        } else {
+        if (Symtable[n->v.id].class == C_GLOBAL) {
           return cgloadglob(n->v.id, n->op);
+        } else {
+          return cgloadlocal(n->v.id, n->op);
         }
       } else {
         return NOREG;
@@ -249,10 +249,3 @@ int genglobstr(char *strvalue) {
   return l;
 };
 
-void genresetlocals(void) {
-  cgresetlocals();
-}
-
-int gengetlocaloffset(int type, int isparam) {
-  return cggetlocaloffset(type, isparam);
-}

@@ -13,3 +13,4 @@ int addlocl(char *name, int type, int stype, int endlabel, int size);
 // Find a symbol within the symbol table, return
 //its slot position or -1 if not found
 int findsymbol(char *s);
+void freeloclsyms(void);

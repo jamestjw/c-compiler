@@ -47,6 +47,8 @@ int findglob(char *s) {
   int i;
 
   for (i = 0; i < Globs; i++) {
+    // Only match globals
+    if (Symtable[i].class == C_PARAM) continue; 
     // Check if 1st char matches before doing strcmp
     if (*s == *Symtable[i].name && !strcmp(s, Symtable[i].name)) {
       return i;
@@ -82,19 +84,26 @@ int findlocl(char *s) {
   return -1;
 }
 
-int addlocl(char *name, int type, int stype, int endlabel, int size) {
-  int slot, posn;
+int addlocl(char *name, int type, int stype, int isparam, int size) {
+  int localslot, globalslot;
 
-  // Return existing slot if it already exists in the symbol table
-  if ((slot = findlocl(name)) != -1)
-    return slot;
+  // Return -1 if the symbol already exists
+  if ((localslot = findlocl(name)) != -1)
+    return -1;
 
   // Otherwise, we get a new slot and position for this local
-  slot = newlocl();
-  posn = gengetlocaloffset(type, 0);
-  updatesym(slot, name, type, stype, C_LOCAL, endlabel, size, posn);
+  localslot = newlocl();
 
-  return slot;
+  if (isparam) {
+    updatesym(localslot, name, type, stype, C_PARAM, 0, size, 0);
+    globalslot = newglob();
+    // Insert as global to function as function prototype
+    updatesym(globalslot, name, type, stype, C_PARAM, 0, size, 0);
+  } else {
+    updatesym(localslot, name, type, stype, C_LOCAL, 0, size, 0);
+  }
+
+  return localslot;
 }
 
 int findsymbol(char *s) {
@@ -105,4 +114,8 @@ int findsymbol(char *s) {
     slot = findglob(s);
 
   return slot;
+}
+
+void freeloclsyms(void) {
+  Locls = NSYMBOLS - 1;
 }

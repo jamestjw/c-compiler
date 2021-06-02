@@ -128,7 +128,8 @@ static struct ASTnode *single_statement(void) {
     case T_LONG:
       type = parse_type();
       ident();
-      var_declaration(type, 1);
+      var_declaration(type, 1, 0);
+      semi();
       return NULL; // No AST here
     case T_IF:
       return if_statement();

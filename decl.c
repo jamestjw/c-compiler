@@ -35,7 +35,7 @@ int parse_type() {
 // Parse the declaration of a list of
 // variables. The identifier should have
 // been scanned prior to calling this function.
-void var_declaration(int type, int islocal) {
+void var_declaration(int type, int islocal, int isparam) {
   // Handle `int list[5];`
   if (Token.token == T_LBRACKET) {
     // Consume the '[' 
@@ -53,42 +53,43 @@ void var_declaration(int type, int islocal) {
     // Consume int literal
     scan(&Token);
     match(T_RBRACKET, "]");
-    semi();
-  } else { // Handle `int a,b,c;`
-    while (1) {
-      if (islocal) {
-        addlocl(Text, type, S_VARIABLE, 0, 1);
-      } else {
-        addglob(Text, type, S_VARIABLE, 0, 1);
-      } 
-  
-      // If the next token is a semicolon, we 
-      // consume it and we have come to the end
-      // of the declaration.
-      if (Token.token == T_SEMI) {
-        scan(&Token);
-        return;
-      }
-  
-      // If the next token is a comma, consume it
-      // and proceed to the next iteration of the
-      // loop to continue parsing the declaration.
-      if (Token.token == T_COMMA) {
-        scan(&Token);
-        ident();
-        continue;
-      }
-  
-      fatal("Missing ',' or ';' after identifier in variable declaration");
+  } else {
+    if (islocal) {
+      if (addlocl(Text, type, S_VARIABLE, isparam, 1) == -1)
+       fatals("Duplicate local variable declaration", Text);
+    } else {
+      addglob(Text, type, S_VARIABLE, 0, 1);
     }
   }
+}
+
+static int param_declaration(void) {
+  int type;
+  int paramcnt = 0;
+
+  // Loop until we hit the right parenthesis
+  while (Token.token != T_RPAREN) {
+    type = parse_type();
+    ident();
+    var_declaration(type, 1, 1);
+    paramcnt++;
+
+    switch (Token.token) {
+      case T_COMMA: scan(&Token); break;
+      case T_RPAREN: break;
+      default:
+        fatald("Unexpected token in parameter list", Token.token);
+    }
+  }
+
+  return paramcnt;
 }
 
 // The identifier should already have been consumed
 // prior to calling this function.
 struct ASTnode *function_declaration(int type) {
   struct ASTnode *tree, *finalstmt;
-  int nameslot, endlabel;
+  int nameslot, endlabel, paramcnt;
 
   // Get a label for the label that we place at the 
   // end of the function
@@ -96,9 +97,9 @@ struct ASTnode *function_declaration(int type) {
   nameslot = addglob(Text, type, S_FUNCTION, endlabel, 0);
   Functionid = nameslot;
 
-  genresetlocals();
-
   lparen();
+  paramcnt = param_declaration();
+  Symtable[nameslot].nelems = paramcnt;
   rparen();
 
   // Parse function body
@@ -108,6 +109,9 @@ struct ASTnode *function_declaration(int type) {
   // check that the last AST operation in the
   // compound statement was a return statement
   if (type != P_VOID) {
+    if (tree == NULL)
+      fatal("No statements in fucntion with non-void type");
+
     finalstmt = (tree->op == A_GLUE ? tree->right : tree);
     if (finalstmt == NULL || finalstmt->op != A_RETURN)
       fatal("No return for function with non-void type");
@@ -138,9 +142,12 @@ void global_declarations(void) {
       }
 
       genAST(tree, NOREG, 0);
+
+      freeloclsyms();
     } else {
       // Dealing with variable declaration
-      var_declaration(type, 0);
+      var_declaration(type, 0, 0);
+      semi();
     }
 
     if (Token.token == T_EOF)

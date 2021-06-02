@@ -72,14 +72,16 @@ struct ASTnode {
 
 // Symbol table entry
 struct symtable {
-  char *name;     // Name of a symbol
-  int type;       // Primitive type of the symbol
-  int stype;      // Structural type of the symbol
-  int endlabel;   // End label for S_FUNCTIONs
-  int size;       // Number of elements in the symbol
-  int class;      // Storage class for the symbol
-  int posn;       // Negative offset from the stack BP
-                  // for locals
+  char *name;         // Name of a symbol
+  int type;           // Primitive type of the symbol
+  int stype;          // Structural type of the symbol
+  int endlabel;       // End label for S_FUNCTIONs
+  int size;           // Number of elements in the symbol
+  int class;          // Storage class for the symbol
+  int posn;           // Negative offset from the stack BP
+                      // for locals
+#define nelems posn   // For functions, # of params
+                      // For structs, # of fields
 };
 
 // Primitive types
@@ -96,5 +98,6 @@ enum {
 enum {
   C_GLOBAL = 1, // Globally visible symbol
   C_LOCAL,      // Locally visible symbol
+  C_PARAM,      // Locally visible function parameter
 };
 
