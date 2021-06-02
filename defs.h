@@ -77,6 +77,9 @@ struct symtable {
   int stype;      // Structural type of the symbol
   int endlabel;   // End label for S_FUNCTIONs
   int size;       // Number of elements in the symbol
+  int class;      // Storage class for the symbol
+  int posn;       // Negative offset from the stack BP
+                  // for locals
 };
 
 // Primitive types
@@ -88,5 +91,10 @@ enum {
 // Structural types
 enum {
   S_VARIABLE, S_FUNCTION, S_ARRAY,
+};
+
+enum {
+  C_GLOBAL = 1, // Globally visible symbol
+  C_LOCAL,      // Locally visible symbol
 };
 

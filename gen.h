@@ -12,3 +12,5 @@ int genlabel(void);
 // Generate code for a string literal and return the
 // label for it
 int genglobstr(char *strvalue);
+void genresetlocals(void);
+int gengetlocaloffset(int type, int isparam);

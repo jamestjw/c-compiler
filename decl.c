@@ -35,9 +35,7 @@ int parse_type() {
 // Parse the declaration of a list of
 // variables. The identifier should have
 // been scanned prior to calling this function.
-void var_declaration(int type) {
-  int id;
- 
+void var_declaration(int type, int islocal) {
   // Handle `int list[5];`
   if (Token.token == T_LBRACKET) {
     // Consume the '[' 
@@ -46,21 +44,23 @@ void var_declaration(int type) {
     // Check for array size
     // TODO: Must provide size for now
     if (Token.token == T_INTLIT) {
-      id = addglob(Text, pointer_to(type), S_ARRAY, 0, Token.intvalue);
-      genglobsym(id);
-
-      // Consume int literal
-      scan(&Token);
-      match(T_RBRACKET, "]");
-      semi();
-      return;
-    } else {
-      fatal("Missing array size");
+      if (islocal) {
+        addlocl(Text, pointer_to(type), S_ARRAY, 0, Token.intvalue);
+      } else {
+        addglob(Text, pointer_to(type), S_ARRAY, 0, Token.intvalue);
+      }
     }
+    // Consume int literal
+    scan(&Token);
+    match(T_RBRACKET, "]");
+    semi();
   } else { // Handle `int a,b,c;`
     while (1) {
-      id = addglob(Text, type, S_VARIABLE, 0, 1);
-      genglobsym(id);
+      if (islocal) {
+        addlocl(Text, type, S_VARIABLE, 0, 1);
+      } else {
+        addglob(Text, type, S_VARIABLE, 0, 1);
+      } 
   
       // If the next token is a semicolon, we 
       // consume it and we have come to the end
@@ -95,7 +95,8 @@ struct ASTnode *function_declaration(int type) {
   endlabel = genlabel();
   nameslot = addglob(Text, type, S_FUNCTION, endlabel, 0);
   Functionid = nameslot;
-  // TODO: Support function with parameters
+
+  genresetlocals();
 
   lparen();
   rparen();
@@ -139,7 +140,7 @@ void global_declarations(void) {
       genAST(tree, NOREG, 0);
     } else {
       // Dealing with variable declaration
-      var_declaration(type);
+      var_declaration(type, 0);
     }
 
     if (Token.token == T_EOF)

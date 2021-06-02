@@ -108,7 +108,7 @@ int genAST(struct ASTnode *n, int label, int parentASTop) {
       return NOREG;
     case A_FUNCTION:
       // Generate the function preamble
-      cgfuncpreamble(Gsym[n->v.id].name);
+      cgfuncpreamble(n->v.id);
       genAST(n->left, NOREG, n->op);
       cgfuncpostamble(n->v.id);
       return NOREG;
@@ -144,16 +144,24 @@ int genAST(struct ASTnode *n, int label, int parentASTop) {
     case A_IDENT:
       // Load the value if it is an r-value
       // or if it is a dereference.
-      if (n->rvalue || parentASTop == A_DEREF)
-        return cgloadglob(n->v.id, n->op);
-      else
+      if (n->rvalue || parentASTop == A_DEREF) {
+        if (Symtable[n->v.id].class == C_LOCAL) {
+          return cgloadlocal(n->v.id, n->op);
+        } else {
+          return cgloadglob(n->v.id, n->op);
+        }
+      } else {
         return NOREG;
+      }
     case A_ASSIGN:
       // Handle differently based on whether we are storing
       // to an identifier or through a pointer
       switch (n->right->op) {
         case A_IDENT:
-          return cgstorglob(leftreg, n->right->v.id);
+          if (Symtable[n->right->v.id].class == C_LOCAL)
+            return cgstorlocal(leftreg, n->right->v.id);
+          else
+            return cgstorglob(leftreg, n->right->v.id);
         case A_DEREF:
           // rightreg should contain the pointer to the
           // identifier to store to.
@@ -239,4 +247,12 @@ int genglobstr(char *strvalue) {
   int l = genlabel();
   cgglobstr(l, strvalue);
   return l;
+};
+
+void genresetlocals(void) {
+  cgresetlocals();
+}
+
+int gengetlocaloffset(int type, int isparam) {
+  return cggetlocaloffset(type, isparam);
 }

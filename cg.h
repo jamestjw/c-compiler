@@ -1,7 +1,7 @@
 void freeall_registers(void);
 void cgpreamble();
 void cgpostamble();
-void cgfuncpreamble(char *name);
+void cgfuncpreamble(int id);
 void cgfuncpostamble(int id);
 
 int cgloadint(int value, int type);
@@ -73,3 +73,10 @@ int cgshl(int r1, int r2);
 int cgshr(int r1, int r2);
 int cglognot(int r);
 int cgboolean(int r, int op, int label);
+// Reset offset of local variables when parsing a new function
+void cgresetlocals(void);
+// Get the position of the next local variable
+int cggetlocaloffset(int type, int isparam);
+int cgloadlocal(int id, int op);
+// Store a register's value into a local variable
+int cgstorlocal(int r, int id);

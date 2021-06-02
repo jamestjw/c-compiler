@@ -99,7 +99,7 @@ static struct ASTnode *return_statement(void) {
   struct ASTnode *tree;
   int functype;
 
-  functype = Gsym[Functionid].type;
+  functype = Symtable[Functionid].type;
 
   if (functype == P_VOID)
     fatal("Can't return from a void function");
@@ -128,7 +128,7 @@ static struct ASTnode *single_statement(void) {
     case T_LONG:
       type = parse_type();
       ident();
-      var_declaration(type);
+      var_declaration(type, 1);
       return NULL; // No AST here
     case T_IF:
       return if_statement();
