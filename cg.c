@@ -416,19 +416,20 @@ int cgprimsize(int type) {
   return psize[type];
 }
 
-int cgcall(int r, int id) {
+int cgcall(int id, int numargs) {
   int outr = alloc_register();
 
-  // Move argument to %rdi
-  // movq %r8, %rdi
-  fprintf(Outfile, "\tmovq\t%s, %%rdi\n", reglist[r]);
   // call funcname
   fprintf(Outfile, "\tcall\t%s\n", Symtable[id].name);
+
+  // Remove arguments pushed to the stack
+  if (numargs > 6)
+    // addq $16, %rsp
+    fprintf(Outfile, "\taddq\t$%d, %%rsp\n", 8 * (numargs - 6));
+
   // Move return code from %rax
   // movq %rax, %r9
   fprintf(Outfile, "\tmovq\t%%rax, %s\n", reglist[outr]);
-
-  free_register(r);
 
   return outr;
 }
@@ -685,4 +686,17 @@ int cgstorlocal(int r, int id) {
       fatald("Bad type in cgstorlocal:", Symtable[id].type);
   }
   return r;
+}
+
+void cgcopyarg(int r, int argposn) {
+  // Only 6 arguments will be in registers, the rest
+  // should be pushed directly to the stack
+  if (argposn > 6) {
+    // pushq %r10
+    fprintf(Outfile, "\tpushq\t%s\n", reglist[r]);
+  } else {
+    // +1 because argposn is 1-based
+    // movq %r10, %rdi 
+    fprintf(Outfile, "\tmovq\t%s, %s\n", reglist[r], reglist[FIRSTPARAMREG - argposn + 1]);
+  }
 }

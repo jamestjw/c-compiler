@@ -81,6 +81,34 @@ static int genWHILE(struct ASTnode *n) {
   return NOREG;
 }
 
+// Generate code to copy the arguments of a
+// function call to the right places, then
+// invoke the function itself. Return the
+// register that holds the function's return
+// value.
+static int gen_funccall(struct ASTnode *n) {
+  struct ASTnode *gluetree = n->left;
+  int reg;
+  int numargs = 0;
+
+  while (gluetree) {
+    reg = genAST(gluetree->right, NOLABEL, gluetree->op);
+    // The size param indicates that this the nth argument
+    // to be passed to the function
+    cgcopyarg(reg, gluetree->v.size);
+
+    // Note down the total number of arguments (first gluetree
+    // we encounter is the one with the biggest count)
+    if (numargs == 0)
+      numargs = gluetree->v.size;
+
+    genfreeregs();
+    gluetree = gluetree->left;
+  }
+
+  return cgcall(n->v.id, numargs);
+}
+
 // Given an AST node, recursively generate assembly
 // code for it. Returns the identifier of the register
 // that contains the results of evaluating this node.
@@ -112,6 +140,8 @@ int genAST(struct ASTnode *n, int label, int parentASTop) {
       genAST(n->left, NOREG, n->op);
       cgfuncpostamble(n->v.id);
       return NOREG;
+    case A_FUNCCALL:
+      return gen_funccall(n);
   }
 
   if (n->left) leftreg = genAST(n->left, NOREG, n->op);
@@ -158,10 +188,10 @@ int genAST(struct ASTnode *n, int label, int parentASTop) {
       // to an identifier or through a pointer
       switch (n->right->op) {
         case A_IDENT:
-          if (Symtable[n->right->v.id].class == C_LOCAL)
-            return cgstorlocal(leftreg, n->right->v.id);
-          else
+          if (Symtable[n->right->v.id].class == C_GLOBAL)
             return cgstorglob(leftreg, n->right->v.id);
+          else
+            return cgstorlocal(leftreg, n->right->v.id);
         case A_DEREF:
           // rightreg should contain the pointer to the
           // identifier to store to.
@@ -175,8 +205,6 @@ int genAST(struct ASTnode *n, int label, int parentASTop) {
     case A_RETURN:
       cgreturn(leftreg, Functionid);
       return NOREG;
-    case A_FUNCCALL:
-      return cgcall(leftreg, n->v.id);
     case A_ADDR:
       return cgaddress(n->v.id);
     case A_DEREF:

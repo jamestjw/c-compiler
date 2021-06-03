@@ -79,3 +79,4 @@ void cgresetlocals(void);
 int cgloadlocal(int id, int op);
 // Store a register's value into a local variable
 int cgstorlocal(int r, int id);
+void cgcopyarg(int r, int argposn);
