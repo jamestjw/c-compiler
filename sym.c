@@ -58,7 +58,7 @@ int findglob(char *s) {
   return -1;
 }
 
-int addglob(char *name, int type, int stype, int endlabel, int size) {
+int addglob(char *name, int type, int stype, int class, int endlabel, int size) {
   int slot;
 
   // If the symbol is already in the table, just return it
@@ -68,8 +68,11 @@ int addglob(char *name, int type, int stype, int endlabel, int size) {
   
   // Get a new slot and fill it otherwise
   slot = newglob();
-  updatesym(slot, name, type, stype, C_GLOBAL, endlabel, size, 0);
-  genglobsym(slot);
+  updatesym(slot, name, type, stype, class, endlabel, size, 0);
+
+  if (class == C_GLOBAL)
+    genglobsym(slot);
+
   return slot;
 }
 
@@ -84,8 +87,8 @@ int findlocl(char *s) {
   return -1;
 }
 
-int addlocl(char *name, int type, int stype, int isparam, int size) {
-  int localslot, globalslot;
+int addlocl(char *name, int type, int stype, int class, int size) {
+  int localslot;
 
   // Return -1 if the symbol already exists
   if ((localslot = findlocl(name)) != -1)
@@ -94,14 +97,7 @@ int addlocl(char *name, int type, int stype, int isparam, int size) {
   // Otherwise, we get a new slot and position for this local
   localslot = newlocl();
 
-  if (isparam) {
-    updatesym(localslot, name, type, stype, C_PARAM, 0, size, 0);
-    globalslot = newglob();
-    // Insert as global to function as function prototype
-    updatesym(globalslot, name, type, stype, C_PARAM, 0, size, 0);
-  } else {
-    updatesym(localslot, name, type, stype, C_LOCAL, 0, size, 0);
-  }
+  updatesym(localslot, name, type, stype, class, 0, size, 0);
 
   return localslot;
 }
@@ -118,4 +114,18 @@ int findsymbol(char *s) {
 
 void freeloclsyms(void) {
   Locls = NSYMBOLS - 1;
+}
+
+// Given a function's slot number, copy the global
+// parameters from its prototype to be local
+// params.
+void copyfuncparams(int slot) {
+  // +1 since the param is found in the slot next to
+  // the function in the symbol table
+  int i, id = slot + 1;
+
+  for (i = 0; i < Symtable[slot].nelems; i++, id++) {
+    addlocl(Symtable[id].name, Symtable[id].type, Symtable[id].stype,
+        Symtable[id].class, Symtable[id].size);
+  }
 }

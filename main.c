@@ -58,8 +58,8 @@ int main(int argc, char* argv[]) {
 
   // TODO: For now, use this hack to ensure that printint()
   // and printchar() are defined
-  addglob("printint", P_INT, S_FUNCTION, 0, 0);
-  addglob("printchar", P_VOID, S_FUNCTION, 0, 0);
+  addglob("printint", P_INT, S_FUNCTION, C_GLOBAL, 0, 0);
+  addglob("printchar", P_VOID, S_FUNCTION, C_GLOBAL, 0, 0);
 
   scan(&Token);
   genpreamble();

@@ -104,6 +104,9 @@ void dumpAST(struct ASTnode *n, int label, int level) {
       fprintf(stdout, "A_GE\n"); return;
     case A_INTLIT:
       fprintf(stdout, "A_INTLIT %d\n", n->v.intvalue); return;
+    case A_STRLIT:
+      fprintf(stdout, "A_STRLIT rval label L%d\n", n->v.id);
+      return;
     case A_IDENT:
       if (n->rvalue)
         fprintf(stdout, "A_IDENT rval %s\n", Symtable[n->v.id].name);

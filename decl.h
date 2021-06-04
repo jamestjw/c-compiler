@@ -1,4 +1,4 @@
-void var_declaration(int type, int islocal, int isparam);
+void var_declaration(int type, int class);
 struct ASTnode *function_declaration(int type);
 void global_declarations(void);
 // Consumes a type token and returns a primitive type
