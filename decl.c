@@ -164,7 +164,7 @@ struct ASTnode *function_declaration(int type) {
   // compound statement was a return statement
   if (type != P_VOID) {
     if (tree == NULL)
-      fatal("No statements in fucntion with non-void type");
+      fatal("No statements in function with non-void type");
 
     finalstmt = (tree->op == A_GLUE ? tree->right : tree);
     if (finalstmt == NULL || finalstmt->op != A_RETURN)

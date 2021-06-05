@@ -242,10 +242,16 @@ int genAST(struct ASTnode *n, int label, int parentASTop) {
       return cgshr(leftreg, rightreg);
     case A_POSTINC:
     case A_POSTDEC:
-      return cgloadglob(n->v.id, n->op);
+      if (Symtable[n->v.id].class == C_GLOBAL)
+        return (cgloadglob(n->v.id, n->op));
+      else
+        return (cgloadlocal(n->v.id, n->op));
     case A_PREINC:
     case A_PREDEC:
-      return cgloadglob(n->left->v.id, n->op);
+      if (Symtable[n->left->v.id].class == C_GLOBAL)
+        return (cgloadglob(n->left->v.id, n->op));
+      else
+        return (cgloadlocal(n->left->v.id, n->op));
     case A_NEGATE:
       return cgnegate(leftreg);
     case A_INVERT:
