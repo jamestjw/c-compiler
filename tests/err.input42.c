@@ -1,1 +1,1 @@
-Undeclared function:fred on line 1
+Undeclared function:fred on line 2

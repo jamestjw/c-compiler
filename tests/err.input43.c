@@ -1,1 +1,1 @@
-Undeclared array:b on line 1
+Undeclared array:b on line 2

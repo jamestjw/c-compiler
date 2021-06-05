@@ -1,1 +1,1 @@
-Can't return from a void function on line 1
+Can't return from a void function on line 2

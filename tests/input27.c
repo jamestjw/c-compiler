@@ -1,25 +1,26 @@
+int printf(char *fmt);
 int param8(int a, int b, int c, int d, int e, int f, int g, int h) {
-  printint(a); printint(b); printint(c); printint(d);
-  printint(e); printint(f); printint(g); printint(h);
+  printf("%d\n", a); printf("%d\n", b); printf("%d\n", c); printf("%d\n", d);
+  printf("%d\n", e); printf("%d\n", f); printf("%d\n", g); printf("%d\n", h);
   return(0);
 }
 
 int param5(int a, int b, int c, int d, int e) {
-  printint(a); printint(b); printint(c); printint(d); printint(e);
+  printf("%d\n", a); printf("%d\n", b); printf("%d\n", c); printf("%d\n", d); printf("%d\n", e);
   return(0);
 }
 
 int param2(int a, int b) {
   int c; int d; int e;
   c= 3; d= 4; e= 5;
-  printint(a); printint(b); printint(c); printint(d); printint(e);
+  printf("%d\n", a); printf("%d\n", b); printf("%d\n", c); printf("%d\n", d); printf("%d\n", e);
   return(0);
 }
 
 int param0() {
   int a; int b; int c; int d; int e;
   a= 1; b= 2; c= 3; d= 4; e= 5;
-  printint(a); printint(b); printint(c); printint(d); printint(e);
+  printf("%d\n", a); printf("%d\n", b); printf("%d\n", c); printf("%d\n", d); printf("%d\n", e);
   return(0);
 }
 

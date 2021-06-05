@@ -1,3 +1,4 @@
+int printf(char *fmt);
 int fred() {
   return(5);
 }
@@ -5,5 +6,5 @@ int fred() {
 void main() {
   int x;
   x= fred(2);
-  printint(x);
+  printf("%d\n", x);
 }

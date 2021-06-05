@@ -129,3 +129,8 @@ void copyfuncparams(int slot) {
         Symtable[id].class, Symtable[id].size);
   }
 }
+
+void clear_symtable(void) {
+  Globs = 0;
+  Locls = NSYMBOLS - 1;
+}

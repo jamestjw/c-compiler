@@ -1,1 +1,1 @@
-Incompatible return type on line 2
+Incompatible return type on line 3

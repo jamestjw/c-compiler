@@ -2,18 +2,18 @@ SRCS= cg.c decl.c expr.c gen.c main.c misc.c scan.c stmt.c sym.c tree.c types.c
 ARMSRCS= cg_arm.c decl.c expr.c gen.c main.c misc.c scan.c stmt.c \
 	sym.c tree.c types.c
 
-comp1: $(SRCS)
-	cc -o comp1 -g -Wall $(SRCS)
+ccc: $(SRCS)
+	cc -o ccc -g -Wall $(SRCS)
 
-comp1arm: $(ARMSRCS)
-	cc -o comp1arm -g -Wall $(ARMSRCS)
-	cp comp1arm comp1
+cccarm: $(ARMSRCS)
+	cc -o cccarm -g -Wall $(ARMSRCS)
+	cp cccarm ccc
 clean:
-	rm -rf comp1* comp1arm* *.o *.s out
+	rm -rf ccc* cccarm* *.o *.s out
 
-test: comp1 tests/runtests
+test: ccc tests/runtests
 	(cd tests; chmod +x runtests; ./runtests)
 
-armtest: comp1arm tests/runtests
+armtest: cccarm tests/runtests
 	(cd tests; chmod +x runtests; ./runtests)
 

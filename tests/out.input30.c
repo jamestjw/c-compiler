@@ -1,3 +1,4 @@
+int printf(char *fmt);
 int open(char *pathname, int flags);
 int read(int fd, char *buf, int count);
 int write(int fd, void *buf, int count);

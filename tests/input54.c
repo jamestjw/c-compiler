@@ -1,4 +1,5 @@
 int printf(char *fmt);
+int printf(char *fmt);
 
 int main()
 {

@@ -1,1 +1,1 @@
-Unrecognised character:$ on line 3
+Unrecognised character:$ on line 4

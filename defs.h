@@ -8,6 +8,10 @@
 #define NOREG -1        // When AST generation functions have no registers to return
 #define NOLABEL 0       // When we have no label to pass to genAST()
 
+#define AOUT "a.out"
+#define ASCMD "as -o "
+#define LDCMD "cc -o "
+
 // For now, a token represents the 4 basic math operators and decimal whole numbers only.
 struct token {
   int token;

@@ -1,9 +1,10 @@
+int printf(char *fmt);
 int a;
 int b[25];
 
 int main() {
   b[3]= 12;
   a= b[3];
-  printint(a);
+  printf("%d\n", a);
   return(0);
 }
