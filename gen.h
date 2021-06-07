@@ -3,7 +3,7 @@ void genpostamble();
 void genfreeregs();
 void genprintint(int reg);
 // Generate code for global symbol declaration
-void genglobsym(int id);
+void genglobsym(struct symtable *node);
 int genAST(struct ASTnode *n, int reg, int parentASTop);
 // Return the size of a particular primitive
 int genprimsize(int type);

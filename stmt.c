@@ -23,7 +23,7 @@ struct ASTnode *if_statement(void) {
 
   if (condAST->op < A_EQ || condAST->op > A_GE)
     // Convert any integer that is not a zero to a 1
-    condAST = mkastunary(A_TOBOOL, condAST->type, condAST, 0);
+    condAST = mkastunary(A_TOBOOL, condAST->type, condAST, NULL, 0);
   rparen();
 
   // AST for the compound statement for the TRUE clause
@@ -36,7 +36,7 @@ struct ASTnode *if_statement(void) {
     falseAST = compound_statement();
   }
 
-  return mkastnode(A_IF, P_NONE, condAST, trueAST, falseAST, 0);
+  return mkastnode(A_IF, P_NONE, condAST, trueAST, falseAST, NULL, 0);
 }
 
 struct ASTnode *while_statement(void) {
@@ -58,7 +58,7 @@ struct ASTnode *while_statement(void) {
   // Parse the body of the while statement
   bodyAST = compound_statement();
 
-  return mkastnode(A_WHILE, P_NONE, condAST, NULL, bodyAST, 0);
+  return mkastnode(A_WHILE, P_NONE, condAST, NULL, bodyAST, NULL, 0);
 }
 
 static struct ASTnode *for_statement(void) {
@@ -77,7 +77,7 @@ static struct ASTnode *for_statement(void) {
   // Parse the condition and the ';'
   condAST = binexpr(0);
   if (condAST->op < A_EQ || condAST->op > A_GE)
-    condAST = mkastunary(A_TOBOOL, condAST->type, condAST, 0);
+    condAST = mkastunary(A_TOBOOL, condAST->type, condAST, NULL, 0);
   semi();
 
   // Get the post_op statement and the ')'
@@ -89,17 +89,17 @@ static struct ASTnode *for_statement(void) {
 
   // TODO: For now all 4 subtrees have to be non-null.
   // We can improve this in the future.
-  tree = mkastnode(A_GLUE, P_NONE, bodyAST, NULL, postopAST, 0);
-  tree = mkastnode(A_WHILE, P_NONE, condAST, NULL, tree, 0);
+  tree = mkastnode(A_GLUE, P_NONE, bodyAST, NULL, postopAST, NULL, 0);
+  tree = mkastnode(A_WHILE, P_NONE, condAST, NULL, tree, NULL, 0);
 
-  return mkastnode(A_GLUE, P_NONE, preopAST, NULL, tree,  0);
+  return mkastnode(A_GLUE, P_NONE, preopAST, NULL, tree, NULL, 0);
 }
 
 static struct ASTnode *return_statement(void) {
   struct ASTnode *tree;
   int functype;
 
-  functype = Symtable[Functionid].type;
+  functype = Functionid->type;
 
   if (functype == P_VOID)
     fatal("Can't return from a void function");
@@ -112,7 +112,7 @@ static struct ASTnode *return_statement(void) {
   tree = modify_type(tree, functype, 0);
   if (tree == NULL) fatal("Incompatible return type");
 
-  tree = mkastunary(A_RETURN, P_NONE, tree, 0);
+  tree = mkastunary(A_RETURN, P_NONE, tree, NULL, 0);
   
   rparen();
 
@@ -167,7 +167,7 @@ struct ASTnode *compound_statement(void) {
       if (left == NULL)
         left = tree;
       else
-        left = mkastnode(A_GLUE, P_NONE, left, NULL, tree, 0);
+        left = mkastnode(A_GLUE, P_NONE, left, NULL, tree, NULL, 0);
     }
 
     if (Token.token == T_RBRACE) {

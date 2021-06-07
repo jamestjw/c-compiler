@@ -1,8 +1,8 @@
 void freeall_registers(void);
 void cgpreamble();
 void cgpostamble();
-void cgfuncpreamble(int id);
-void cgfuncpostamble(int id);
+void cgfuncpreamble(struct symtable *n);
+void cgfuncpostamble(struct symtable *sym);
 
 int cgloadint(int value, int type);
 int cgadd(int r1, int r2);
@@ -12,12 +12,12 @@ int cgdiv(int r1, int r2);
 // Load a value from a global symbol. If the 
 // operation is a pre/post-increment, also
 // perform this action
-int cgloadglob(int id, int op);
+int cgloadglob(struct symtable *sym, int op);
 // Load a value to a global symbol
-int cgstorglob(int r, int id);
+int cgstorglob(int r, struct symtable *sym);
 
 // Define a global symbol
-void cgglobsym(int id);
+void cgglobsym(struct symtable *sym);
 void cgprintint(int r);
 
 // Compares values in two registers based on the
@@ -43,14 +43,14 @@ int cgprimsize(int type);
 // Call a function with one argument from the
 // given register and return a register with the 
 // result of the function call
-int cgcall(int r, int id);
+int cgcall(struct symtable *sym, int numargs);
 // Return from a function call while returning a
 // value in the passed register
-void cgreturn(int reg, int id);
+void cgreturn(int reg, struct symtable *sym);
 // Generate code to load address of a global identifier
 // into a variable and returning the register that contains
 // it
-int cgaddress(int id);
+int cgaddress(struct symtable *sym);
 // Dereference a pointer and loading the value into the
 // same register
 int cgderef(int r, int type);
@@ -63,7 +63,7 @@ int cgstorderef(int r1, int r2, int type);
 void cgglobstr(int l, char *strvalue);
 // Return register containing pointer to a string
 // literal of this ID
-int cgloadglobstr(int id);
+int cgloadglobstr(int label);
 int cgand(int r1, int r2);
 int cgor(int r1, int r2);
 int cgxor(int r1, int r2);
@@ -76,7 +76,7 @@ int cgboolean(int r, int op, int label);
 // Reset offset of local variables when parsing a new function
 void cgresetlocals(void);
 // Get the position of the next local variable
-int cgloadlocal(int id, int op);
+int cgloadlocal(struct symtable *sym, int op);
 // Store a register's value into a local variable
-int cgstorlocal(int r, int id);
+int cgstorlocal(int r, struct symtable *sym);
 void cgcopyarg(int r, int argposn);

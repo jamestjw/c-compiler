@@ -66,15 +66,15 @@ static int rightassoc(int tokentype) {
 // token should be pointing at a '['
 static struct ASTnode *array_access(void) {
   struct ASTnode *left, *right;
-  int id;
+  struct symtable *aryptr;
 
   // Ensure that such an identifier exists and points to
   // an array
-  if ((id = findsymbol(Text)) == -1 || Symtable[id].stype != S_ARRAY) {
+  if ((aryptr = findsymbol(Text)) == NULL || aryptr->stype != S_ARRAY) {
     fatals("Undeclared array", Text);
   }
 
-  left = mkastleaf(A_ADDR, Symtable[id].type, id);
+  left = mkastleaf(A_ADDR, aryptr->type, aryptr, 0);
 
   // Consume the '['
   scan(&Token);
@@ -90,14 +90,15 @@ static struct ASTnode *array_access(void) {
   right = modify_type(right, left->type, A_ADD);
 
   // Add offset to base of the array and dereference it
-  left = mkastnode(A_ADD, Symtable[id].type, left, NULL, right, 0);
-  left = mkastunary(A_DEREF, value_at(left->type), left, 0);
+  left = mkastnode(A_ADD, aryptr->type, left, NULL, right, NULL, 0);
+  left = mkastunary(A_DEREF, value_at(left->type), left, NULL, 0);
   return left;
 }
 
 static struct ASTnode *postfix(void) {
   struct ASTnode *n;
-  int id;
+  struct symtable *varptr;
+  
   // In order to know if this is a variable, a function
   // call or an array index so  we need to look at 
   // the subsequent token
@@ -112,21 +113,20 @@ static struct ASTnode *postfix(void) {
  
   // We assume that we have found a variable,
   // so we check for its existence
-  id = findsymbol(Text);
-  if (id == -1 || Symtable[id].stype != S_VARIABLE)
+  if ((varptr = findsymbol(Text)) == NULL || varptr->stype != S_VARIABLE)
     fatals("Unknown variable", Text);
 
   switch(Token.token) {
     case T_INC:
       scan(&Token);
-      n = mkastleaf(A_POSTINC, Symtable[id].type, id);
+      n = mkastleaf(A_POSTINC, varptr->type, varptr, 0);
       break;
     case T_DEC:
       scan(&Token);
-      n = mkastleaf(A_POSTDEC, Symtable[id].type, id);
+      n = mkastleaf(A_POSTDEC, varptr->type, varptr, 0);
       break;
     default:
-      n = mkastleaf(A_IDENT, Symtable[id].type, id);
+      n = mkastleaf(A_IDENT, varptr->type, varptr, 0);
   }
   return n;
 }
@@ -141,13 +141,13 @@ static struct ASTnode *primary(void) {
       // Create AST node with P_CHAR type if within
       // P_CHAR range
       if ((Token.intvalue) >= 0 && (Token.intvalue < 256))
-        n = mkastleaf(A_INTLIT, P_CHAR, Token.intvalue);
+        n = mkastleaf(A_INTLIT, P_CHAR, NULL, Token.intvalue);
       else
-        n = mkastleaf(A_INTLIT, P_INT, Token.intvalue);
+        n = mkastleaf(A_INTLIT, P_INT, NULL, Token.intvalue);
       break;
     case T_STRLIT:
       id = genglobstr(Text);
-      n = mkastleaf(A_STRLIT, pointer_to(P_CHAR), id);
+      n = mkastleaf(A_STRLIT, pointer_to(P_CHAR), NULL, id);
       break;
     case T_IDENT:
       return postfix();
@@ -189,7 +189,7 @@ struct ASTnode *prefix(void) {
 
       if (tree->op != A_IDENT && tree->op != A_DEREF)
         fatal("* operator must be followed by an identifier or *");
-      tree = mkastunary(A_DEREF, value_at(tree->type), tree, 0);
+      tree = mkastunary(A_DEREF, value_at(tree->type), tree, NULL, 0);
       break;
     case T_MINUS:
       scan(&Token);
@@ -199,19 +199,19 @@ struct ASTnode *prefix(void) {
       // Widen to int in case we are operating on
       // chars that are unsigned
       tree = modify_type(tree, P_INT, 0);
-      tree = mkastunary(A_NEGATE, tree->type, tree, 0);
+      tree = mkastunary(A_NEGATE, tree->type, tree, NULL, 0);
       break;
     case T_INVERT:
       scan(&Token);
       tree = prefix();
       tree->rvalue = 1;
-      tree = mkastunary(A_INVERT, tree->type, tree, 0);
+      tree = mkastunary(A_INVERT, tree->type, tree, NULL, 0);
       break;
     case T_LOGNOT:
       scan(&Token);
       tree = prefix();
       tree->rvalue = 1;
-      tree = mkastunary(A_LOGNOT, tree->type, tree, 0);
+      tree = mkastunary(A_LOGNOT, tree->type, tree, NULL, 0);
       break;    
     case T_INC:
       scan(&Token);
@@ -220,7 +220,7 @@ struct ASTnode *prefix(void) {
       if (tree->op != A_IDENT)
         fatal("++ operator must be followed by an identifier");
 
-      tree = mkastunary(A_PREINC, tree->type, tree, 0);
+      tree = mkastunary(A_PREINC, tree->type, tree, NULL, 0);
       break;
     case T_DEC:
       scan(&Token);
@@ -229,7 +229,7 @@ struct ASTnode *prefix(void) {
       if (tree->op != A_IDENT)
         fatal("-- operator must be followed by an identifier");
 
-      tree = mkastunary(A_PREDEC, tree->type, tree, 0);
+      tree = mkastunary(A_PREDEC, tree->type, tree, NULL, 0);
       break;
     default:
       tree = primary();
@@ -307,7 +307,7 @@ struct ASTnode *binexpr(int ptp) {
     // Join that subtree with the left node
     // The node contains an expression of the same type
     // as the left node.
-    left = mkastnode(binastop(tokentype), left->type, left, NULL, right, 0);
+    left = mkastnode(binastop(tokentype), left->type, left, NULL, right, NULL, 0);
 
     tokentype = Token.token;
 
@@ -336,7 +336,7 @@ static struct ASTnode *expression_list(void) {
 
     // Build an A_GLUE node with the previous tree as the left child
     // and the new expression as the right child
-    tree = mkastnode(A_GLUE, P_NONE, tree, NULL, child, exprcount);
+    tree = mkastnode(A_GLUE, P_NONE, tree, NULL, child, NULL, exprcount);
 
     switch (Token.token) {
       case T_COMMA:
@@ -354,11 +354,11 @@ static struct ASTnode *expression_list(void) {
 
 struct ASTnode *funccall(void) {
   struct ASTnode *tree;
-  int id;
-  
+  struct symtable *funcptr;
+
   // Check that the function has been declared
   // TODO: Check if stype == S_FUNCTION
-  if ((id = findsymbol(Text)) == -1) {
+  if ((funcptr = findsymbol(Text)) == NULL || funcptr->stype != S_FUNCTION) {
     fatals("Undeclared function", Text);
   }
 
@@ -371,7 +371,7 @@ struct ASTnode *funccall(void) {
 
   // Store the function's return type as this node's type
   // along with the symbol ID
-  tree = mkastunary(A_FUNCCALL, Symtable[id].type, tree, id);
+  tree = mkastunary(A_FUNCCALL, funcptr->type, tree, funcptr, 0);
 
   rparen();
 

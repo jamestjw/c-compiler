@@ -9,8 +9,8 @@
 #define NOLABEL 0       // When we have no label to pass to genAST()
 
 #define AOUT "a.out"
-#define ASCMD "as -o "
-#define LDCMD "cc -o "
+#define ASCMD "as -o"
+#define LDCMD "cc -o" 
 
 // For now, a token represents the 4 basic math operators and decimal whole numbers only.
 struct token {
@@ -67,6 +67,7 @@ struct ASTnode {
   struct ASTnode *left;     // Left, middle and right child trees
   struct ASTnode *mid;
   struct ASTnode *right;
+  struct symtable *sym;     // The pointer to the symbol in the symtable
   union {
     int intvalue;           // Integer value for A_INTLIT
     int id;                 // Symbol slot number for A_IDENT
@@ -76,20 +77,26 @@ struct ASTnode {
 
 // Symbol table entry
 struct symtable {
-  char *name;         // Name of a symbol
-  int type;           // Primitive type of the symbol
-  int stype;          // Structural type of the symbol
-  int class;          // Storage class for the symbol
+  char *name;              // Name of a symbol
+  int type;                // Primitive type of the symbol
+  struct symtable *ctype;  // Pointer to the composite type if needed 
+  int stype;               // Structural type of the symbol
+  int class;               // Storage class for the symbol
+                           // i.e. C_GLOBAL, C_LOCAL or C_PARAM
   union {
-    int size;         // Number of elements in the symbol
-    int endlabel;     // End label for S_FUNCTIONs
+    int size;              // Number of elements in the symbol
+    int endlabel;          // End label for S_FUNCTIONs
+    int intvalue;          // For enum symbols, the associated int value
   };
   union {
-    int posn;         // Negative offset from the stack BP
-                      // for locals
-    int nelems;       // For functions, # of params
-                      // For structs, # of fields
+    int posn;              // Negative offset from the stack BP
+                           // for locals
+    int nelems;            // For functions, # of params
+                           // For structs, # of fields
   };
+
+  struct symtable *next;   // Next symbol on the list
+  struct symtable *member; // First parameter of a function
 };
 
 // Primitive types

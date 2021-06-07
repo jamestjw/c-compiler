@@ -7,7 +7,7 @@
 #include "tree.h"
 #include "types.h"
 
-int Functionid;
+struct symtable *Functionid;
 
 // Parse the current token and 
 // return a primitive type enum value
@@ -35,8 +35,19 @@ int parse_type() {
 // Parse the declaration of a list of
 // variables. The identifier should have
 // been scanned prior to calling this function.
-void var_declaration(int type, int class) {
-  // Handle `int list[5];`
+struct symtable *var_declaration(int type, int class) {
+  struct symtable *sym = NULL;
+
+  switch (class) {
+    case C_GLOBAL:
+      if (findglob(Text)!= NULL)
+        fatals("Duplicate global variable declaration", Text);
+    case C_LOCAL:
+    case C_PARAM:
+      if (findlocl(Text) != NULL)
+        fatals("Duplicate local variable declaration", Text);
+  }
+
   if (Token.token == T_LBRACKET) {
     // Consume the '[' 
     scan(&Token);
@@ -44,42 +55,47 @@ void var_declaration(int type, int class) {
     // Check for array size
     // TODO: Must provide size for now
     if (Token.token == T_INTLIT) {
-      if (class == C_LOCAL) {
-        fatal("TODO: Implement support for local arrays.");
-      } else {
-        addglob(Text, pointer_to(type), S_ARRAY, class, Token.intvalue);
+      switch (class) {
+        case C_GLOBAL:
+          sym = addglob(Text, pointer_to(type), S_ARRAY, class, Token.intvalue);
+          break;
+        case C_LOCAL:
+        case C_PARAM:
+          fatal("TODO: Implement support for local arrays.");
       }
     }
     // Consume int literal
     scan(&Token);
     match(T_RBRACKET, "]");
   } else {
-    if (class == C_LOCAL) {
-      if (addlocl(Text, type, S_VARIABLE, class, 1) == -1)
-       fatals("Duplicate local variable declaration", Text);
-    } else {
-      addglob(Text, type, S_VARIABLE, class, 1);
+    switch (class) {
+      case C_GLOBAL:
+        sym = addglob(Text, type, S_VARIABLE, class, 1);
+        break;
+      case C_LOCAL:
+        sym = addlocl(Text, type, S_VARIABLE, class, 1);
+        break;
+      case C_PARAM:
+        sym = addparm(Text, type, S_VARIABLE, class, 1);
+        break;
     }
   }
+
+  return sym;
 }
 
 // Parse the parameters in the parentheses after the function
 // name. Add them as symbols to the symbol table and return the
-// number of parameters. If ID is not -1, then there is an
-// existing function prototype and the function has this slot
-// number in the symbol table.
-static int param_declaration(int id) {
-  int type, param_id;
-  int orig_paramcnt;
+// number of parameters. If funcsym is not NULL, then there is an
+// existing function prototype and the function has this symtable
+// entry.
+static int param_declaration(struct symtable *funcsym) {
+  int type;
   int paramcnt = 0;
+  struct symtable *protoptr = NULL;
 
-  // This holds either 0 if there is no prototype defined
-  // yet, or the position of the zeroth parameter in the
-  // symbol table
-  param_id = id + 1;
-
-  if (param_id)
-    orig_paramcnt = Symtable[id].nelems;
+  if (funcsym != NULL)
+    protoptr = funcsym->member;
 
   // Loop until we hit the right parenthesis
   while (Token.token != T_RPAREN) {
@@ -87,10 +103,10 @@ static int param_declaration(int id) {
     ident();
 
     // If prototype already exists, check that the types match
-    if (param_id) {
-      if (type != Symtable[param_id].type)
-        fatald("Type doesn't match prototype for parameter", param_id - id);
-      param_id++;
+    if (protoptr != NULL) {
+      if (type != protoptr->type)
+        fatald("Type doesn't match prototype for parameter", paramcnt + 1);
+      protoptr = protoptr->next;
     } else {
       // Add a new parameter to the prototype
       var_declaration(type, C_PARAM);
@@ -109,8 +125,8 @@ static int param_declaration(int id) {
     }
   }
 
-  if ((id != -1) && (paramcnt != orig_paramcnt))
-    fatals("Parameter count mismatch for function", Symtable[id].name);
+  if ((funcsym != NULL) && (paramcnt != funcsym->nelems))
+    fatals("Parameter count mismatch for function", funcsym->name);
 
   return paramcnt;
 }
@@ -119,30 +135,36 @@ static int param_declaration(int id) {
 // prior to calling this function.
 struct ASTnode *function_declaration(int type) {
   struct ASTnode *tree, *finalstmt;
-  int id;
-  int nameslot, endlabel, paramcnt;
+  struct symtable *oldfuncsym, *newfuncsym = NULL;
+  int endlabel, paramcnt;
 
-  // Check if a function with this name has already been
-  // defined and set the ID.
-  if ((id = findsymbol(Text)) != -1)
-    if (Symtable[id].stype != S_FUNCTION)
-      id = -1;
+  // Fetch the function symbol if it exists
+  if ((oldfuncsym = findsymbol(Text)) != NULL)
+    if (oldfuncsym->stype != S_FUNCTION)
+      oldfuncsym = NULL;
 
   // If this is a new function declaration, get a label ID
-  // for the end label and add it to the symbol table
-  if (id == -1) {
+  // for the end label and add the fucntion to the symbol table
+  if (oldfuncsym == NULL) {
     endlabel = genlabel();
-    nameslot = addglob(Text, type, S_FUNCTION, C_GLOBAL, endlabel);
+    newfuncsym = addglob(Text, type, S_FUNCTION, C_GLOBAL, endlabel);
   }
 
   lparen();
-  paramcnt = param_declaration(id);
+  paramcnt = param_declaration(oldfuncsym);
   rparen();
 
   // If this is a new function declaration, update the
-  // entry with the number of parameters
-  if (id == -1)
-    Symtable[nameslot].nelems = paramcnt;
+  // entry with the number of parameters and the parameter
+  // list.
+  if (newfuncsym) {
+    newfuncsym->nelems = paramcnt;
+    newfuncsym->member = Parmhead;
+    oldfuncsym = newfuncsym;
+  }
+
+  // Clear our the param list
+  Parmhead = Parmtail = NULL;
 
   // Check if this is a full declaration or just a prototype
   if (Token.token == T_SEMI) {
@@ -150,11 +172,9 @@ struct ASTnode *function_declaration(int type) {
     return NULL;
   }
 
-  if (id == -1) id = nameslot;
-
-  // Copy global parameters to local parameters
-  copyfuncparams(id);
-  Functionid = id;
+  // If we get to this point, it means that we handling
+  // a full function declaration and not just a prototype
+  Functionid = oldfuncsym;
 
   // Parse function body
   tree = compound_statement();
@@ -171,7 +191,7 @@ struct ASTnode *function_declaration(int type) {
       fatal("No return for function with non-void type");
   }
 
-  return mkastunary(A_FUNCTION, type, tree, id);
+  return mkastunary(A_FUNCTION, type, tree, oldfuncsym, endlabel);
 }
 
 void global_declarations(void) {

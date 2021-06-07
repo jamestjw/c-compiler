@@ -3,137 +3,124 @@
 #include "misc.h"
 #include "sym.h"
 
-struct symtable Symtable[NSYMBOLS];
-int Globs = 0;
-int Locls = NSYMBOLS - 1;
+struct symtable *Globhead, *Globtail;
+struct symtable *Loclhead, *Locltail;
+struct symtable *Parmhead, *Parmtail;
+struct symtable *Comphead, *Comptail;
 
-// Get position of new global symbol slot, crashes if
-// no remaining slots are available
-static int newglob(void) {
-  int p;
+void appendsym(struct symtable **head, struct symtable **tail, struct symtable *node) {
+  if (head == NULL || tail == NULL || node == NULL)
+    fatal("Either head, tail or node is NULL in appendsym");
 
-  if ((p = Globs++) >= Locls) {
-    fatal("Too many global symbols");
+  if (*tail) {
+    // Append to the end of the list
+    (*tail)->next = node;
+    *tail = node;
+  } else {
+    // Insert first element into the list
+    *head = *tail = node;
   }
 
-  return p;
+  node->next = NULL;
 }
 
-static int newlocl(void) {
-  int p;
+struct symtable *newsym(char *name, int type, int stype, int class, 
+    int size, int posn) {
+  struct symtable *node = (struct symtable *) malloc(sizeof(struct symtable));
+  if (node == NULL)
+    fatal("Unable to malloc a symtable node in newsym");
 
-  if ((p = Locls--) <= Globs)
-    fatal("Too many local symbols");
-
-  return p;
-}
-
-// Update a symbol at a given slot number in the symbol table
-// + type: P_CHAR, P_VOID etc
-// + stype: Structural type S_FUNCTION, S_ARRAY etc
-// + size: Number of elements in array or endlabel for function
-// + posn: Position info for local vars
-static void updatesym(int slot, char *name, int type, int stype,
-                      int class, int size, int posn) {
-  if (slot < 0 || slot >= NSYMBOLS)
-    fatal("Invalid slot symbol in updatesym");
-
-  Symtable[slot].name = strdup(name);
-  Symtable[slot].type = type;
-  Symtable[slot].stype = stype;
-  Symtable[slot].class = class;
-  Symtable[slot].size = size;
-  Symtable[slot].posn = posn;
-}
-
-int findglob(char *s) {
-  int i;
-
-  for (i = 0; i < Globs; i++) {
-    // Only match globals
-    if (Symtable[i].class == C_PARAM) continue; 
-    // Check if 1st char matches before doing strcmp
-    if (*s == *Symtable[i].name && !strcmp(s, Symtable[i].name)) {
-      return i;
-    }
-  }
-
-  return -1;
-}
-
-int addglob(char *name, int type, int stype, int class, int size) {
-  int slot;
-
-  // If the symbol is already in the table, just return it
-  if ((slot = findglob(name)) != -1) {
-    return slot;
-  }
-  
-  // Get a new slot and fill it otherwise
-  slot = newglob();
-  updatesym(slot, name, type, stype, class, size, 0);
+  node->name = strdup(name);
+  node->type = type;
+  node->stype = stype;
+  node->class = class;
+  node->size = size;
+  node->posn = posn;
+  node->next = NULL;
+  node->member = NULL;
 
   if (class == C_GLOBAL)
-    genglobsym(slot);
+    genglobsym(node);
 
-  return slot;
+  return node;
 }
 
-int findlocl(char *s) {
-  int i;
+struct symtable *addglob(char *name, int type, int stype, int class, int size) {
+  struct symtable *sym = newsym(name, type, stype, class, size, 0);
+  appendsym(&Globhead, &Globtail, sym);
+  return sym;
+}
 
-  for (i = Locls + 1; i < NSYMBOLS; i++) {
-    if (*s == *Symtable[i].name && !strcmp(s, Symtable[i].name))
-      return i;
+struct symtable *addlocl(char *name, int type, int stype, int class, int size) {
+  struct symtable *sym = newsym(name, type, stype, class, size, 0);
+  appendsym(&Loclhead, &Locltail, sym);
+  return sym;
+}
+
+struct symtable *addparm(char *name, int type, int stype, int class, int size) {
+  struct symtable *sym = newsym(name, type, stype, class, size, 0);
+  appendsym(&Parmhead, &Parmtail, sym);
+  return sym;
+}
+
+static struct symtable *findsyminlist(char *s, struct symtable *list) {
+  for (; list != NULL; list = list->next) {
+    if ((list->name != NULL) && !strcmp(s, list->name))
+      return list;
   }
 
-  return -1;
+  return NULL;
 }
 
-int addlocl(char *name, int type, int stype, int class, int size) {
-  int localslot;
-
-  // Return -1 if the symbol already exists
-  if ((localslot = findlocl(name)) != -1)
-    return -1;
-
-  // Otherwise, we get a new slot and position for this local
-  localslot = newlocl();
-
-  updatesym(localslot, name, type, stype, class, size, 0);
-
-  return localslot;
+struct symtable *findglob(char *s) {
+  return findsyminlist(s, Globhead);
 }
 
-int findsymbol(char *s) {
-  int slot;
+struct symtable *findlocl(char *s) {
+  struct symtable *node;
 
-  slot = findlocl(s);
-  if (slot == -1)
-    slot = findglob(s);
-
-  return slot;
-}
-
-void freeloclsyms(void) {
-  Locls = NSYMBOLS - 1;
-}
-
-// Given a function's slot number, copy the global
-// parameters from its prototype to be local
-// params.
-void copyfuncparams(int slot) {
-  // +1 since the param is found in the slot next to
-  // the function in the symbol table
-  int i, id = slot + 1;
-
-  for (i = 0; i < Symtable[slot].nelems; i++, id++) {
-    addlocl(Symtable[id].name, Symtable[id].type, Symtable[id].stype,
-        Symtable[id].class, Symtable[id].size);
+  // Look for a parameter if we are in a function's body
+  if (Functionid) {
+    node = findsyminlist(s, Functionid->member);
+    if (node)
+      return node;
   }
+
+  return findsyminlist(s, Loclhead);
+}
+
+struct symtable *findsymbol(char *s) {
+  struct symtable *node;
+
+  // First search params of a function if
+  // we are within one
+  if (Functionid) {
+    node = findsyminlist(s, Functionid->member);
+    if (node) return node;
+  }
+
+  // Then try the local list
+  node = findsyminlist(s, Loclhead);
+  if (node) return node;
+
+  // And finally the global list
+  return findsyminlist(s, Globhead);
+}
+
+struct symtable *findcomposite(char *s) {
+  return findsyminlist(s, Comphead);
 }
 
 void clear_symtable(void) {
-  Globs = 0;
-  Locls = NSYMBOLS - 1;
+  Globhead = Globtail = NULL;
+  Loclhead = Locltail = NULL;
+  Parmhead = Parmtail = NULL;
+  Comphead = Comptail = NULL;
 }
+
+void freeloclsyms(void) {
+  Loclhead = Locltail = NULL;
+  Parmhead = Parmtail = NULL;
+  Functionid = NULL;
+}
+
