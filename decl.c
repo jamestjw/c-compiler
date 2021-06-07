@@ -47,7 +47,7 @@ void var_declaration(int type, int class) {
       if (class == C_LOCAL) {
         fatal("TODO: Implement support for local arrays.");
       } else {
-        addglob(Text, pointer_to(type), S_ARRAY, class, 0, Token.intvalue);
+        addglob(Text, pointer_to(type), S_ARRAY, class, Token.intvalue);
       }
     }
     // Consume int literal
@@ -58,7 +58,7 @@ void var_declaration(int type, int class) {
       if (addlocl(Text, type, S_VARIABLE, class, 1) == -1)
        fatals("Duplicate local variable declaration", Text);
     } else {
-      addglob(Text, type, S_VARIABLE, class, 0, 1);
+      addglob(Text, type, S_VARIABLE, class, 1);
     }
   }
 }
@@ -132,7 +132,7 @@ struct ASTnode *function_declaration(int type) {
   // for the end label and add it to the symbol table
   if (id == -1) {
     endlabel = genlabel();
-    nameslot = addglob(Text, type, S_FUNCTION, C_GLOBAL, endlabel, 0);
+    nameslot = addglob(Text, type, S_FUNCTION, C_GLOBAL, endlabel);
   }
 
   lparen();

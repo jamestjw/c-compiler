@@ -17,7 +17,7 @@ int interpretAST(struct ASTnode *n) {
 
   #ifdef DEBUG_INTERP
     if (n->op == A_INTLIT)
-      printf("int %d\n", n->v.intvalue);
+      printf("int %d\n", n->intvalue);
     else
       printf("%d %s %d\n", leftval, ASTop[n->op], rightval);
   #endif
@@ -32,7 +32,7 @@ int interpretAST(struct ASTnode *n) {
     case A_DIVIDE:
       return (leftval / rightval);
     case A_INTLIT:
-      return n->v.intvalue;
+      return n->intvalue;
     default:
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);

@@ -9,7 +9,7 @@ cccarm: $(ARMSRCS)
 	cc -o cccarm -g -Wall $(ARMSRCS)
 	cp cccarm ccc
 clean:
-	rm -rf ccc* cccarm* *.o *.s out
+	rm -rf ccc* cccarm* *.o *.s tests/*.o tests/*.s out
 
 test: ccc tests/runtests
 	(cd tests; chmod +x runtests; ./runtests)

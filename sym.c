@@ -29,8 +29,12 @@ static int newlocl(void) {
 }
 
 // Update a symbol at a given slot number in the symbol table
+// + type: P_CHAR, P_VOID etc
+// + stype: Structural type S_FUNCTION, S_ARRAY etc
+// + size: Number of elements in array or endlabel for function
+// + posn: Position info for local vars
 static void updatesym(int slot, char *name, int type, int stype,
-                      int class, int endlabel, int size, int posn) {
+                      int class, int size, int posn) {
   if (slot < 0 || slot >= NSYMBOLS)
     fatal("Invalid slot symbol in updatesym");
 
@@ -38,7 +42,6 @@ static void updatesym(int slot, char *name, int type, int stype,
   Symtable[slot].type = type;
   Symtable[slot].stype = stype;
   Symtable[slot].class = class;
-  Symtable[slot].endlabel = endlabel;
   Symtable[slot].size = size;
   Symtable[slot].posn = posn;
 }
@@ -58,7 +61,7 @@ int findglob(char *s) {
   return -1;
 }
 
-int addglob(char *name, int type, int stype, int class, int endlabel, int size) {
+int addglob(char *name, int type, int stype, int class, int size) {
   int slot;
 
   // If the symbol is already in the table, just return it
@@ -68,7 +71,7 @@ int addglob(char *name, int type, int stype, int class, int endlabel, int size) 
   
   // Get a new slot and fill it otherwise
   slot = newglob();
-  updatesym(slot, name, type, stype, class, endlabel, size, 0);
+  updatesym(slot, name, type, stype, class, size, 0);
 
   if (class == C_GLOBAL)
     genglobsym(slot);
@@ -97,7 +100,7 @@ int addlocl(char *name, int type, int stype, int class, int size) {
   // Otherwise, we get a new slot and position for this local
   localslot = newlocl();
 
-  updatesym(localslot, name, type, stype, class, 0, size, 0);
+  updatesym(localslot, name, type, stype, class, size, 0);
 
   return localslot;
 }

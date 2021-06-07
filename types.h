@@ -8,3 +8,4 @@ struct ASTnode *modify_type(struct ASTnode *tree, int rtype, int op);
 // Return true if the type is an integer compatible 
 // type.
 int inttype(int type);
+int ptrtype(int type);

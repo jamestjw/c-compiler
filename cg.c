@@ -3,6 +3,7 @@
 #include "data.h"
 #include "cg.h"
 #include "misc.h"
+#include "types.h"
 
 // Flag to say which section were are outputting in to
 enum { no_seg, text_seg, data_seg } currSeg = no_seg;
@@ -56,18 +57,6 @@ void cgdataseg() {
 void freeall_registers(void) {
   freereg[0] = freereg[1] = freereg[2] = freereg[3] = 1;
 }
-
-// Array of sizes of primitives
-static int psize[] = {
-  0, // P_NONE 
-  0, // P_VOID
-  1, // P_CHAR
-  4, // P_INT
-  8, // P_LONG
-  8, // P_CHARPTR
-  8, // P_INTPTR
-  8, // P_LONGPTR
-};
 
 // Allocate a free register and returns the corresponding
 // identifier. Program exits if no available registers remain.
@@ -243,8 +232,8 @@ int cgloadglob(int id, int op) {
   char *name = Symtable[id].name;
   int r = alloc_register();
 
-  switch (Symtable[id].type) {
-    case P_CHAR:
+  switch (cgprimsize(Symtable[id].type)) {
+    case 1:
       if (op == A_PREINC)
         // incb identifier(%rip)
         fprintf(Outfile, "\tincb\t%s(\%%rip)\n", name);
@@ -262,7 +251,7 @@ int cgloadglob(int id, int op) {
         // decb identifier(%rip)
         fprintf(Outfile, "\tdecb\t%s(\%%rip)\n", name);
       break;
-    case P_INT:
+    case 4:
       if (op == A_PREINC)
         // incl identifier(%rip)
         fprintf(Outfile, "\tincl\t%s(\%%rip)\n", name);
@@ -280,10 +269,7 @@ int cgloadglob(int id, int op) {
         // decl identifier(%rip)
         fprintf(Outfile, "\tdecl\t%s(\%%rip)\n", name);
       break;
-    case P_LONG:
-    case P_CHARPTR:
-    case P_INTPTR:
-    case P_LONGPTR:
+    case 8:
       if (op == A_PREINC)
         // incq identifier(%rip)
         fprintf(Outfile, "\tincq\t%s(\%%rip)\n", name);
@@ -309,20 +295,17 @@ int cgloadglob(int id, int op) {
 }
 
 int cgstorglob(int r, int id) {
-  switch (Symtable[id].type) {
-    case P_CHAR:
+  switch (cgprimsize(Symtable[id].type)) {
+    case 1:
       // Only move a single byte for chars
       // e.g. movb %r10b, identifier(%rip)
       fprintf(Outfile, "\tmovb\t%s, %s(\%%rip)\n", breglist[r], Symtable[id].name);
       break;
-    case P_INT:
+    case 4:
       // e.g. movl %r10d, identifier(%rip)
       fprintf(Outfile, "\tmovl\t%s, %s(\%%rip)\n", dreglist[r], Symtable[id].name);
       break;
-    case P_LONG:
-    case P_CHARPTR:
-    case P_INTPTR:
-    case P_LONGPTR:
+    case 8:
       // e.g. movq %r10, identifier(%rip)
       fprintf(Outfile, "\tmovq\t%s, %s(\%%rip)\n", reglist[r], Symtable[id].name);
       break;
@@ -410,10 +393,19 @@ int cgwiden(int r, int oldtype, int newtype) {
 }
 
 int cgprimsize(int type) {
-  if (type < P_NONE || type > P_LONGPTR)
-    fatal("Bad type in cgprimsize()");
+  if (ptrtype(type))
+    return 8;
+ 
+  switch (type) {
+    case P_CHAR: return 1;
+    case P_INT: return 4;
+    case P_LONG: return 8;
+    default:
+      fatald("Bad type in cgprimsize", type);
+  }
 
-  return psize[type];
+  // Handle -Wall violation
+  return 0;
 }
 
 int cgcall(int id, int numargs) {
@@ -467,13 +459,20 @@ int cgaddress(int id) {
 }
 
 int cgderef(int r, int type) {
-  switch (type) {
-    case P_CHARPTR:
+  int newtype = value_at(type);
+  int size = cgprimsize(newtype);
+
+  switch (size) {
+    case 1:
       // movzbq (%r10), r10
       fprintf(Outfile, "\tmovzbq\t(%s), %s\n", reglist[r], reglist[r]);
       break;
-    case P_INTPTR:
-    case P_LONGPTR:
+    case 2:
+      // movzwq (%r10), r10
+      fprintf(Outfile, "\tmovzwq\t(%s), %s\n", reglist[r], reglist[r]);
+      break;
+    case 4:
+    case 8:
       // movq (%r10), r10
       fprintf(Outfile, "\tmovq\t(%s), %s\n", reglist[r], reglist[r]);
       break;
@@ -489,15 +488,16 @@ int cgshlconst(int r, int val) {
 }
 
 int cgstorderef(int r1, int r2, int type) {
+  int size = cgprimsize(type);
+
   // movq %r8, (%r10)
-  switch (type) {
-    case P_CHAR:
+  switch (size) {
+    case 1:
       fprintf(Outfile, "\tmovb\t%s, (%s)\n", breglist[r1], reglist[r2]);
       break;
-    case P_INT:
-      fprintf(Outfile, "\tmovq\t%s, (%s)\n", reglist[r1], reglist[r2]);
-      break;
-    case P_LONG:
+    case 2:
+    case 4:
+    case 8:
       fprintf(Outfile, "\tmovq\t%s, (%s)\n", reglist[r1], reglist[r2]);
       break;
     default:
@@ -616,8 +616,8 @@ int cgloadlocal(int id, int op) {
   int r = alloc_register();
 
   // Print out the code to initialise it
-  switch (Symtable[id].type) {
-    case P_CHAR:
+  switch (cgprimsize(Symtable[id].type)) {
+    case 1:
       if (op == A_PREINC)
 	      fprintf(Outfile, "\tincb\t%d(%%rbp)\n", Symtable[id].posn);
       if (op == A_PREDEC)
@@ -630,7 +630,7 @@ int cgloadlocal(int id, int op) {
       if (op == A_POSTDEC)
 	      fprintf(Outfile, "\tdecb\t%d(%%rbp)\n", Symtable[id].posn);
       break;
-    case P_INT:
+    case 4:
       if (op == A_PREINC)
 	      fprintf(Outfile, "\tincl\t%d(%%rbp)\n", Symtable[id].posn);
       if (op == A_PREDEC)
@@ -643,10 +643,7 @@ int cgloadlocal(int id, int op) {
       if (op == A_POSTDEC)
 	      fprintf(Outfile, "\tdecl\t%d(%%rbp)\n", Symtable[id].posn);
       break;
-    case P_LONG:
-    case P_CHARPTR:
-    case P_INTPTR:
-    case P_LONGPTR:
+    case 8:
       if (op == A_PREINC)
 	      fprintf(Outfile, "\tincq\t%d(%%rbp)\n", Symtable[id].posn);
       if (op == A_PREDEC)
@@ -666,19 +663,16 @@ int cgloadlocal(int id, int op) {
 }
 
 int cgstorlocal(int r, int id) {
-  switch (Symtable[id].type) {
-    case P_CHAR:
+  switch (cgprimsize(Symtable[id].type)) {
+    case 1:
       fprintf(Outfile, "\tmovb\t%s, %d(%%rbp)\n", breglist[r],
 	      Symtable[id].posn);
       break;
-    case P_INT:
+    case 4:
       fprintf(Outfile, "\tmovl\t%s, %d(%%rbp)\n", dreglist[r],
 	      Symtable[id].posn);
       break;
-    case P_LONG:
-    case P_CHARPTR:
-    case P_INTPTR:
-    case P_LONGPTR:
+    case 8:
       fprintf(Outfile, "\tmovq\t%s, %d(%%rbp)\n", reglist[r],
 	      Symtable[id].posn);
       break;

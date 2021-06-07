@@ -71,7 +71,7 @@ struct ASTnode {
     int intvalue;           // Integer value for A_INTLIT
     int id;                 // Symbol slot number for A_IDENT
     int size;               // Size to scale by for A_SCALE
-  } v;
+  };
 };
 
 // Symbol table entry
@@ -79,19 +79,25 @@ struct symtable {
   char *name;         // Name of a symbol
   int type;           // Primitive type of the symbol
   int stype;          // Structural type of the symbol
-  int endlabel;       // End label for S_FUNCTIONs
-  int size;           // Number of elements in the symbol
   int class;          // Storage class for the symbol
-  int posn;           // Negative offset from the stack BP
+  union {
+    int size;         // Number of elements in the symbol
+    int endlabel;     // End label for S_FUNCTIONs
+  };
+  union {
+    int posn;         // Negative offset from the stack BP
                       // for locals
-#define nelems posn   // For functions, # of params
+    int nelems;       // For functions, # of params
                       // For structs, # of fields
+  };
 };
 
 // Primitive types
+// Lower 4 btes encode the level of indirection,
+// e.g. 0b110000 is an int, whereas 0b110001 is an *int
+// 0b110010 is an **int and so on
 enum {
-  P_NONE, P_VOID, P_CHAR, P_INT, P_LONG,
-  P_VOIDPTR, P_CHARPTR, P_INTPTR, P_LONGPTR,
+  P_NONE, P_VOID=16, P_CHAR=32, P_INT=48, P_LONG=64,
 };
 
 // Structural types
