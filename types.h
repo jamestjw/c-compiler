@@ -9,3 +9,4 @@ struct ASTnode *modify_type(struct ASTnode *tree, int rtype, int op);
 // type.
 int inttype(int type);
 int ptrtype(int type);
+int typesize(int type, struct symtable *ctype);

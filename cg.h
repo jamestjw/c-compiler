@@ -80,3 +80,4 @@ int cgloadlocal(struct symtable *sym, int op);
 // Store a register's value into a local variable
 int cgstorlocal(int r, struct symtable *sym);
 void cgcopyarg(int r, int argposn);
+int cgalign(int type, int offset, int direction);

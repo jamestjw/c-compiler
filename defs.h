@@ -43,7 +43,7 @@ enum {
 
   // Other keywords
   T_IF, T_ELSE, T_WHILE,
-  T_FOR, T_RETURN,
+  T_FOR, T_RETURN, T_STRUCT,
 };
 
 // AST node types
@@ -79,7 +79,7 @@ struct ASTnode {
 struct symtable {
   char *name;              // Name of a symbol
   int type;                // Primitive type of the symbol
-  struct symtable *ctype;  // Pointer to the composite type if needed 
+  struct symtable *ctype;  // Pointer to the composite type if type == P_STRUCT 
   int stype;               // Structural type of the symbol
   int class;               // Storage class for the symbol
                            // i.e. C_GLOBAL, C_LOCAL or C_PARAM
@@ -96,7 +96,7 @@ struct symtable {
   };
 
   struct symtable *next;   // Next symbol on the list
-  struct symtable *member; // First parameter of a function
+  struct symtable *member; // First member of a function, struct, union or enum
 };
 
 // Primitive types
@@ -105,6 +105,7 @@ struct symtable {
 // 0b110010 is an **int and so on
 enum {
   P_NONE, P_VOID=16, P_CHAR=32, P_INT=48, P_LONG=64,
+  P_STRUCT = 80,
 };
 
 // Structural types
@@ -116,5 +117,7 @@ enum {
   C_GLOBAL = 1, // Globally visible symbol
   C_LOCAL,      // Locally visible symbol
   C_PARAM,      // Locally visible function parameter
+  C_STRUCT,
+  C_MEMBER,
 };
 

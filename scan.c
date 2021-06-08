@@ -106,6 +106,7 @@ static int scanident(int c, char *buf, int lim) {
 
   // NULL terminate the string
   buf[i] = '\0';
+
   return i;
 }
 
@@ -141,6 +142,10 @@ static int keyword(char *s) {
     case 'r':
       if (!strcmp(s, "return")) 
         return T_RETURN;
+      break;
+    case 's':
+      if (!strcmp(s, "struct")) 
+        return T_STRUCT;
       break;
     case 'v':
       if (!strcmp(s, "void")) 

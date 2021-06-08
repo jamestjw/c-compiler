@@ -124,3 +124,10 @@ struct ASTnode *modify_type(struct ASTnode *tree, int rtype, int op) {
 
   return NULL;
 }
+
+int typesize(int type, struct symtable *ctype) {
+  if (type == P_STRUCT)
+    return ctype->size;
+
+  return genprimsize(type);
+}

@@ -310,13 +310,13 @@ int cgstorglob(int r, struct symtable *sym) {
   return r;
 }
 
-void cgglobsym(struct symtable *sym) {
-  int typesize;
+void cgglobsym(struct symtable *node) {
+  int size;
 
-  if (sym->stype == S_FUNCTION)
+  if (node->stype == S_FUNCTION)
     return;
 
-  typesize = cgprimsize(sym->type);
+  size = cgprimsize(node->type);
    
   // .data
   // .globl varname
@@ -324,15 +324,18 @@ void cgglobsym(struct symtable *sym) {
   //            .long   0
   //            .long   0
   cgdataseg();
-  fprintf(Outfile, "\t.globl\t%s\n", sym->name);
-  fprintf(Outfile, "%s:", sym->name);
+  fprintf(Outfile, "\t.globl\t%s\n", node->name);
+  fprintf(Outfile, "%s:", node->name);
 
-  for (int i = 0; i < sym->size; i++) {
-     switch (typesize) {
+  for (int i = 0; i < node->size; i++) {
+     switch (size) {
        case 1: fprintf(Outfile, "\t.byte\t0\n"); break; 
        case 4: fprintf(Outfile, "\t.long\t0\n"); break; 
        case 8: fprintf(Outfile, "\t.quad\t0\n"); break; 
-       default: fatald("Unknown typesize in cgglobsym", typesize);       
+       default:
+          for (int i = 0; i < size; i++) {
+            fprintf(Outfile, "\t.byte\t0\n");
+          }
      } 
  }                                                                    
 }
@@ -687,4 +690,27 @@ void cgcopyarg(int r, int argposn) {
     // movq %r10, %rdi 
     fprintf(Outfile, "\tmovq\t%s, %s\n", reglist[r], reglist[FIRSTPARAMREG - argposn + 1]);
   }
+}
+
+// Given a scalar type, an existing memory offset (which
+// has not been allocated to anything yet) and a direction
+// (1 is up and -1 is down), calculate and return a suitably
+// aligned memory offset for this scalar type.
+int cgalign(int type, int offset, int direction) {
+  int alignment;
+
+  switch (type) {
+    case P_CHAR:
+      return offset;
+    case P_INT:
+    case P_LONG:
+      break;
+    default:
+      fatald("Bad type in cg_align", type);
+  }
+
+  alignment = 4;
+  offset = (offset + direction * (alignment - 1)) & ~(alignment - 1);
+
+  return offset;
 }

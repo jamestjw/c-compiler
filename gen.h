@@ -12,3 +12,4 @@ int genlabel(void);
 // Generate code for a string literal and return the
 // label for it
 int genglobstr(char *strvalue);
+int genalign(int type, int offset, int direction);

@@ -9,24 +9,106 @@
 
 struct symtable *Functionid;
 
+static int var_declaration_list(struct symtable *funcsym, int class, 
+    int separate_token, int end_token);
+
+// When this function is called, the current token
+// should be T_STRUCT
+static struct symtable *struct_declaration(void) {
+  struct symtable *ctype = NULL;
+  struct symtable *m;
+  int offset;
+
+  scan(&Token);
+
+  if (Token.token == T_IDENT) {
+    ctype = findstruct(Text);
+    scan(&Token);
+  }
+
+  // If we don't see a left brace, it means
+  // that we using an existing struct type
+  // instead of defining a new one.
+  if (Token.token != T_LBRACE) {
+    if (ctype == NULL)
+      // Using an undefined struct
+      fatals("Unknown struct type", Text); 
+
+    return ctype;
+  }
+
+  // Ensure that this struct has not already been
+  // defined
+  if (ctype)
+    fatals("Previously defined struct", Text);
+
+  // Build the struct node and skip the left brace
+  ctype = addstruct(Text, P_STRUCT, NULL, 0, 0);
+  scan(&Token);
+  // Parse the members and populate the Memb symtable list
+  var_declaration_list(NULL, C_MEMBER, T_SEMI, T_RBRACE);
+  rbrace();
+
+  ctype->member = Membhead;
+  Membhead = Membtail = NULL;
+
+  m = ctype->member;
+  m->posn = 0;
+  offset = typesize(m->type, m->ctype);
+
+  for (m = m->next; m != NULL; m = m->next) {
+    // Set the offset for the next member
+    m->posn = genalign(m->type, offset, 1);
+
+    // Get the offset of the next free byte after this member
+    // Is this right implementation??
+    offset = m->posn + typesize(m->type, m->ctype);
+    // Below is incorrect?
+    // offset += typesize(m->type, m->ctype);
+  }
+
+  // Set the overall size of the struct
+  ctype->size = offset;
+
+  return ctype;
+}
+
 // Parse the current token and 
 // return a primitive type enum value
-int parse_type() {
+int parse_type(struct symtable **ctype) {
   int type;
 
   switch (Token.token) {
-    case T_VOID: type = P_VOID; break;
-    case T_CHAR: type = P_CHAR; break;
-    case T_INT:  type = P_INT;  break;
-    case T_LONG: type = P_LONG; break;
+    case T_VOID: 
+      type = P_VOID;
+      scan(&Token);
+      break;
+    case T_CHAR: 
+      type = P_CHAR;
+      scan(&Token);
+      break;
+    case T_INT:  
+      type = P_INT;
+      scan(&Token);
+      break;
+    case T_LONG: 
+      type = P_LONG;
+      scan(&Token);
+      break;
+    case T_STRUCT:
+      type = P_STRUCT;
+      // Look up an existing struct type, or parse the
+      // declaration of a new struct type
+      *ctype = struct_declaration();
+      break;
     default:
        fatald("Illegal type, token", Token.token);
   }
 
   while (1) {
-    scan(&Token);
     if (Token.token != T_STAR) break;
     type = pointer_to(type);
+    scan(&Token);
   }
 
   return type;
@@ -35,7 +117,7 @@ int parse_type() {
 // Parse the declaration of a list of
 // variables. The identifier should have
 // been scanned prior to calling this function.
-struct symtable *var_declaration(int type, int class) {
+struct symtable *var_declaration(int type, struct symtable *ctype, int class) {
   struct symtable *sym = NULL;
 
   switch (class) {
@@ -57,10 +139,11 @@ struct symtable *var_declaration(int type, int class) {
     if (Token.token == T_INTLIT) {
       switch (class) {
         case C_GLOBAL:
-          sym = addglob(Text, pointer_to(type), S_ARRAY, class, Token.intvalue);
+          sym = addglob(Text, pointer_to(type), ctype, S_ARRAY, Token.intvalue);
           break;
         case C_LOCAL:
         case C_PARAM:
+        case C_MEMBER:
           fatal("TODO: Implement support for local arrays.");
       }
     }
@@ -70,13 +153,16 @@ struct symtable *var_declaration(int type, int class) {
   } else {
     switch (class) {
       case C_GLOBAL:
-        sym = addglob(Text, type, S_VARIABLE, class, 1);
+        sym = addglob(Text, type, ctype, S_VARIABLE, 1);
         break;
       case C_LOCAL:
-        sym = addlocl(Text, type, S_VARIABLE, class, 1);
+        sym = addlocl(Text, type, ctype, S_VARIABLE, 1);
         break;
       case C_PARAM:
-        sym = addparm(Text, type, S_VARIABLE, class, 1);
+        sym = addparm(Text, type, ctype, S_VARIABLE, 1);
+        break;
+      case C_MEMBER:
+        sym = addmemb(Text, type, ctype, S_VARIABLE, 1);
         break;
     }
   }
@@ -84,22 +170,27 @@ struct symtable *var_declaration(int type, int class) {
   return sym;
 }
 
-// Parse the parameters in the parentheses after the function
-// name. Add them as symbols to the symbol table and return the
+// When called to parse function params, separate_token token is T_COMMA
+// When called to parse members of a struct/union, separate_token token is T_SEMI
+//
+// Parse a list of variables.
+// Add them as symbols to the symbol table and return the
 // number of parameters. If funcsym is not NULL, then there is an
 // existing function prototype and the function has this symtable
-// entry.
-static int param_declaration(struct symtable *funcsym) {
+// entry and each variable type is verified against the prototype
+static int var_declaration_list(struct symtable *funcsym, int class, 
+    int separate_token, int end_token) {
   int type;
   int paramcnt = 0;
   struct symtable *protoptr = NULL;
+  struct symtable *ctype;
 
   if (funcsym != NULL)
     protoptr = funcsym->member;
 
   // Loop until we hit the right parenthesis
-  while (Token.token != T_RPAREN) {
-    type = parse_type();
+  while (Token.token != end_token) {
+    type = parse_type(&ctype);
     ident();
 
     // If prototype already exists, check that the types match
@@ -108,21 +199,17 @@ static int param_declaration(struct symtable *funcsym) {
         fatald("Type doesn't match prototype for parameter", paramcnt + 1);
       protoptr = protoptr->next;
     } else {
-      // Add a new parameter to the prototype
-      var_declaration(type, C_PARAM);
+      // Add a new parameter to the right symbol table list
+      // based on the class
+      var_declaration(type, ctype, class);
     }
 
     paramcnt++;
 
-    switch (Token.token) {
-      case T_COMMA: 
-        scan(&Token); 
-        break;
-      case T_RPAREN: 
-        break;
-      default:
-        fatald("Unexpected token in parameter list", Token.token);
-    }
+    if ((Token.token != separate_token) && (Token.token != end_token))
+      fatald("Unexpected token in parameter list", Token.token);
+    if (Token.token == separate_token)
+      scan(&Token);
   }
 
   if ((funcsym != NULL) && (paramcnt != funcsym->nelems))
@@ -147,11 +234,11 @@ struct ASTnode *function_declaration(int type) {
   // for the end label and add the fucntion to the symbol table
   if (oldfuncsym == NULL) {
     endlabel = genlabel();
-    newfuncsym = addglob(Text, type, S_FUNCTION, C_GLOBAL, endlabel);
+    newfuncsym = addglob(Text, type, NULL, S_FUNCTION, endlabel);
   }
 
   lparen();
-  paramcnt = param_declaration(oldfuncsym);
+  paramcnt = var_declaration_list(oldfuncsym, C_PARAM, T_COMMA, T_RPAREN);
   rparen();
 
   // If this is a new function declaration, update the
@@ -196,14 +283,30 @@ struct ASTnode *function_declaration(int type) {
 
 void global_declarations(void) {
   struct ASTnode *tree;
+  struct symtable *ctype;
   int type;
 
   while (1) {
     // We have to first parse the type and identifier
     // into order to tell if we are dealing with a 
     // function declaration or a variable declaration.
+
+    if (Token.token == T_EOF)
+      break;
     
-    type = parse_type();
+    // Get the type
+    type = parse_type(&ctype);
+
+    // We might have parsed a struct declaration with no
+    // associated variable.
+    if (type == P_STRUCT && Token.token == T_SEMI) {
+      scan(&Token);
+      continue;
+    }
+
+    // We have to read past the identifier to see either
+    // a '(' for function declaration, or a ',' or ';' for
+    // a variable declaration.
     ident();
 
     if (Token.token == T_LPAREN) {
@@ -224,11 +327,8 @@ void global_declarations(void) {
       freeloclsyms();
     } else {
       // Dealing with variable declaration
-      var_declaration(type, C_GLOBAL);
+      var_declaration(type, ctype, C_GLOBAL);
       semi();
     }
-
-    if (Token.token == T_EOF)
-      break;
   }
 }
