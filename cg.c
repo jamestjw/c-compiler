@@ -313,10 +313,12 @@ int cgstorglob(int r, struct symtable *sym) {
 void cgglobsym(struct symtable *node) {
   int size;
 
+  if (node == NULL)
+    return;
   if (node->stype == S_FUNCTION)
     return;
 
-  size = cgprimsize(node->type);
+  size = typesize(node->type, node->ctype);
    
   // .data
   // .globl varname
@@ -409,7 +411,7 @@ int cgcall(struct symtable *sym, int numargs) {
   int outr = alloc_register();
 
   // call funcname
-  fprintf(Outfile, "\tcall\t%s\n", sym->name);
+  fprintf(Outfile, "\tcall\t%s@PLT\n", sym->name);
 
   // Remove arguments pushed to the stack
   if (numargs > 6)

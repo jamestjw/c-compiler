@@ -95,6 +95,58 @@ static struct ASTnode *array_access(void) {
   return left;
 }
 
+static struct ASTnode *member_access(int withpointer) {
+  struct ASTnode *left, *right;
+  struct symtable *compvar;
+  struct symtable *typeptr;
+  struct symtable *m;
+
+  // Check that the identifier has been declared as a struct
+  // (or a union)
+  if ((compvar = findsymbol(Text)) == NULL)
+    fatals("Undeclared variable", Text);
+  if (withpointer && compvar->type != pointer_to(P_STRUCT))
+    fatals("Undeclared variable", Text);
+  if (!withpointer && compvar->type != P_STRUCT)
+    fatals("Undeclared variable", Text);
+
+  // If we have a pointer to a struct, get the pointer's value.
+  // Otherwise, make a leaf node to get the base address using
+  // A_ADDR
+  if (withpointer) {
+    left = mkastleaf(A_IDENT, pointer_to(P_STRUCT), compvar, 0);
+  } else {
+    left = mkastleaf(A_ADDR, compvar->type, compvar, 0);
+  }
+  left->rvalue = 1;
+
+  // Details of composite type
+  typeptr = compvar->ctype;
+
+  // Skip the . or -> then get the member name
+  scan(&Token);
+  ident();
+
+  // Walk the member list to find the member
+  // we are trying to access
+  for (m = typeptr->member; m != NULL; m = m->next) {
+    if (!strcmp(m->name, Text))
+      break;
+  }
+
+  if (m == NULL)
+    fatals("Member not found in struct/union", Text);
+
+  // Build a node with the offset of the member
+  right = mkastleaf(A_INTLIT, P_INT, NULL, m->posn);
+
+  // Add the member's offset to the base of the struct and dereference it
+  left = mkastnode(A_ADD, pointer_to(m->type), left, NULL, right, NULL, 0);
+  left = mkastunary(A_DEREF, m->type, left, NULL, 0);
+
+  return left;
+}
+
 static struct ASTnode *postfix(void) {
   struct ASTnode *n;
   struct symtable *varptr;
@@ -110,6 +162,11 @@ static struct ASTnode *postfix(void) {
   if (Token.token == T_LBRACKET) {
     return array_access();
   }
+  
+  if (Token.token == T_DOT)
+    return member_access(0);
+  if (Token.token == T_ARROW)
+    return member_access(1);
  
   // We assume that we have found a variable,
   // so we check for its existence

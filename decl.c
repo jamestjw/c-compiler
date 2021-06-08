@@ -122,7 +122,7 @@ struct symtable *var_declaration(int type, struct symtable *ctype, int class) {
 
   switch (class) {
     case C_GLOBAL:
-      if (findglob(Text)!= NULL)
+      if (findglob(Text) != NULL)
         fatals("Duplicate global variable declaration", Text);
     case C_LOCAL:
     case C_PARAM:
