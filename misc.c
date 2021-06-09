@@ -40,6 +40,10 @@ void ident(void) {
   match(T_IDENT, "identifier");
 }
 
+void comma(void) {
+  match(T_COMMA, ",");
+}
+
 void fatal(char *s) {
   fprintf(stderr, "%s on line %d\n", s, Line); 
   fclose(Outfile);

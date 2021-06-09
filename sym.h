@@ -18,8 +18,13 @@ struct symtable *addmemb(char *name, int type, struct symtable *ctype, int stype
 // Add a struct to the struct list
 struct symtable *addstruct(char *name, int type, struct symtable *ctype, int stype, int size);
 struct symtable *addunion(char *name, int type, struct symtable *ctype, int stype, int size);
+struct symtable *addenum(char *name, int class, int value);
+struct symtable *addtypedef(char *name, int type, struct symtable *ctype, int stype, int size);
 struct symtable *findstruct(char *s);
 struct symtable *findunion(char *s);
+struct symtable *findenumtype(char *s);
+struct symtable *findenumval(char *s);
+struct symtable *findtypedef(char *s);
 
 // Find a symbol within the symbol table, return
 //its slot position or -1 if not found

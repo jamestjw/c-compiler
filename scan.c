@@ -124,6 +124,8 @@ static int keyword(char *s) {
     case 'e':
       if (!strcmp(s, "else"))
         return T_ELSE;
+      else if (!strcmp(s, "enum"))
+        return T_ENUM;
       break;
     case 'f':
       if (!strcmp(s, "for"))
@@ -146,6 +148,10 @@ static int keyword(char *s) {
     case 's':
       if (!strcmp(s, "struct"))
         return T_STRUCT;
+      break;
+    case 't':
+      if (!strcmp(s, "typedef"))
+        return T_TYPEDEF;
       break;
     case 'u':
       if (!strcmp(s, "union"))

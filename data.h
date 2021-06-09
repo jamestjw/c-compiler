@@ -13,12 +13,14 @@ extern char Text[TEXTLEN + 1];
 extern struct symtable *Functionid;             // Current function symtable entry
 
 // Symbol table lists
-extern struct symtable *Globhead, *Globtail;	// Global variables and functions
-extern struct symtable *Loclhead, *Locltail;	// Local variables
-extern struct symtable *Parmhead, *Parmtail;	// Local parameters
-extern struct symtable *Membhead, *Membtail;	  // Temp list of struct/union members
-extern struct symtable *Structhead, *Structtail; // List of struct types
-extern struct symtable *Unionhead, *Uniontail; // List of struct types
+extern struct symtable *Globhead, *Globtail;	    // Global variables and functions
+extern struct symtable *Loclhead, *Locltail;	    // Local variables
+extern struct symtable *Parmhead, *Parmtail;	    // Local parameters
+extern struct symtable *Membhead, *Membtail;	    // Temp list of struct/union members
+extern struct symtable *Structhead, *Structtail;  // List of struct types
+extern struct symtable *Unionhead, *Uniontail;    // List of union types
+extern struct symtable *Enumhead, *Enumtail;      // List of enum types
+extern struct symtable *Typehead, *Typetail;      // List of typedefs
 
 extern int O_dumpAST;     // Flag controlling debug output of AST trees
 extern int O_keepasm;		  // Flag controlling whether we keep any assembly files
