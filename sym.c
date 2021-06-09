@@ -8,6 +8,7 @@ struct symtable *Loclhead, *Locltail;
 struct symtable *Parmhead, *Parmtail;
 struct symtable *Membhead, *Membtail;
 struct symtable *Structhead, *Structtail;
+struct symtable *Unionhead, *Uniontail;
 
 void appendsym(struct symtable **head, struct symtable **tail, struct symtable *node) {
   if (head == NULL || tail == NULL || node == NULL)
@@ -73,6 +74,13 @@ struct symtable *addmemb(char *name, int type, struct symtable *ctype,
   return (sym);
 }
 
+struct symtable *addunion(char *name, int type, struct symtable *ctype,
+			   int stype, int size) {
+  struct symtable *sym = newsym(name, type, ctype, stype, C_UNION, size, 0);
+  appendsym(&Unionhead, &Uniontail, sym);
+  return (sym);
+}
+
 struct symtable *addstruct(char *name, int type, struct symtable *ctype,
 			   int stype, int size) {
   struct symtable *sym = newsym(name, type, ctype, stype, C_STRUCT, size, 0);
@@ -122,6 +130,10 @@ struct symtable *findsymbol(char *s) {
 
   // And finally the global list
   return findsyminlist(s, Globhead);
+}
+
+struct symtable *findunion(char *s) {
+  return findsyminlist(s, Unionhead);
 }
 
 struct symtable *findstruct(char *s) {

@@ -17,7 +17,9 @@ struct symtable *addparm(char *name, int type, struct symtable *ctype, int stype
 struct symtable *addmemb(char *name, int type, struct symtable *ctype, int stype, int size);
 // Add a struct to the struct list
 struct symtable *addstruct(char *name, int type, struct symtable *ctype, int stype, int size);
+struct symtable *addunion(char *name, int type, struct symtable *ctype, int stype, int size);
 struct symtable *findstruct(char *s);
+struct symtable *findunion(char *s);
 
 // Find a symbol within the symbol table, return
 //its slot position or -1 if not found
