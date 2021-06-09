@@ -44,6 +44,7 @@ enum {
   // Other keywords
   T_IF, T_ELSE, T_WHILE,
   T_FOR, T_RETURN, T_STRUCT, T_UNION,
+  T_ENUM, T_TYPEDEF,
 };
 
 // AST node types
@@ -118,7 +119,10 @@ enum {
   C_LOCAL,      // Locally visible symbol
   C_PARAM,      // Locally visible function parameter
   C_STRUCT,
-  C_MEMBER,
   C_UNION,
+  C_MEMBER,     // Member of a struct or a union
+  C_ENUMTYPE,   // A named enumeration type
+  C_ENUMVAL,    // A named enumeration value
+  C_TYPEDEF,    // A named typedef
 };
 

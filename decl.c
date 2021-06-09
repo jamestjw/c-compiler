@@ -9,6 +9,7 @@
 
 struct symtable *Functionid;
 
+int parse_type(struct symtable **ctype);
 static int var_declaration_list(struct symtable *funcsym, int class, 
     int separate_token, int end_token);
 
@@ -88,6 +89,98 @@ static struct symtable *composite_declaration(int type) {
   return ctype;
 }
 
+static void enum_declaration(void) {
+  struct symtable *etype = NULL;
+  char *name;
+  int intval = 0;
+
+  // Consume the enum keyword
+  scan(&Token);
+
+  if (Token.token == T_IDENT) {
+    etype = findenumtype(Text);
+    // Cache the identifier lexeme before we lose it
+    name = strdup(Text);
+    scan(&Token);
+  }
+
+  // If we do not hit a left brace, check that this
+  // enum has previously been defined.
+  // e.g. `enum foo var1` instead of `enum foo { x, y, z }`
+  if (Token.token != T_LBRACE) {
+    if (etype == NULL)
+      fatals("Undeclared enum type", name);
+    return;
+  }
+
+  // Consume the LBRACE
+  scan(&Token);
+
+  if (etype != NULL)
+    fatals("Enum type redeclared", etype->name);
+  else
+    etype = addenum(name, C_ENUMTYPE, 0);
+
+  while (1) {
+    // Ensure we have an identifier and cache it
+    ident();
+    name = strdup(Text);
+
+    etype = findenumval(name);
+    if (etype != NULL)
+      fatals("Enum value redeclared", name);
+
+    if (Token.token == T_ASSIGN) {
+      scan(&Token);
+      if (Token.token != T_INTLIT)
+        fatal("Expected int literal after '=' in enum declaration");
+      intval = Token.intvalue;
+      scan(&Token);
+    }
+
+    etype = addenum(name, C_ENUMVAL, intval++);
+
+    if (Token.token == T_RBRACE)
+      break;
+    comma();
+  }
+
+  // Consume RBRACE
+  scan(&Token); 
+}
+
+// Parse a typedef definition and return the type
+// and ctype it represents
+static int typedef_declaration(struct symtable **ctype) {
+  int type;
+
+  // Consume the typedef keyword
+  scan(&Token);
+
+  // Get the actual type following the `typedef` keyword
+  type = parse_type(ctype);
+
+  if (findtypedef(Text) != NULL)
+    fatals("Redefinition of typedef", Text);
+
+  addtypedef(Text, type, *ctype, 0, 0);
+  // Consume the new type name identifier
+  scan(&Token); 
+
+  return type;
+}
+
+static int type_of_typedef(char *name, struct symtable **ctype) {
+  struct symtable *t;
+
+  t = findtypedef(name);
+  if (t == NULL)
+    fatals("Unknown type", name);
+  scan(&Token);
+  *ctype = t->ctype;
+  return t->type;
+}
+
 // Parse the current token and 
 // return a primitive type enum value
 int parse_type(struct symtable **ctype) {
@@ -115,10 +208,31 @@ int parse_type(struct symtable **ctype) {
       // Look up an existing struct type, or parse the
       // declaration of a new struct type
       *ctype = composite_declaration(P_STRUCT);
+      if (Token.token == T_SEMI)
+        type = -1;
       break;
     case T_UNION:
       type = P_UNION;
       *ctype = composite_declaration(P_UNION);
+      if (Token.token == T_SEMI)
+        type = -1;
+      break;
+    case T_ENUM:
+      // Enums are just ints
+      type = P_INT;
+      enum_declaration();
+      if (Token.token == T_SEMI)
+        type = -1;
+      break;
+    case T_TYPEDEF:
+      type = typedef_declaration(ctype);
+      if (Token.token == T_SEMI)
+        type = -1;
+      break;
+    case T_IDENT:
+      // Encountered a type we don't recognise
+      // hence we check if there was a typedef
+      type = type_of_typedef(Text, ctype);
       break;
     default:
        fatald("Illegal type, token", Token.token);
@@ -316,10 +430,10 @@ void global_declarations(void) {
     // Get the type
     type = parse_type(&ctype);
 
-    // We might have parsed a struct/union declaration with no
-    // associated variable.
-    if ((type == P_STRUCT || type == P_UNION) && Token.token == T_SEMI) {
-      scan(&Token);
+    // We might have just parsed a struct, union, or
+    // enum declaration with no associated variable
+    if (type == -1) {
+      semi();
       continue;
     }
 

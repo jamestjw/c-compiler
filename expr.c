@@ -152,6 +152,14 @@ static struct ASTnode *member_access(int withpointer) {
 static struct ASTnode *postfix(void) {
   struct ASTnode *n;
   struct symtable *varptr;
+  struct symtable *enumptr;
+
+  // IF identifier matches an enum value, convert it
+  // to an INTLIT node
+  if ((enumptr = findenumval(Text)) != NULL) {
+    scan(&Token);
+    return mkastleaf(A_INTLIT, P_INT, NULL, enumptr->posn);
+  }
   
   // In order to know if this is a variable, a function
   // call or an array index so  we need to look at 

@@ -5,6 +5,7 @@ void rbrace(void);
 void lparen(void);
 void rparen(void);
 void ident(void);
+void comma(void);
 // Prints an error message and terminates the program with exit code 1
 void fatal(char *s);
 void fatalc(char *s, int c);
