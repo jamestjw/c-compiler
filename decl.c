@@ -14,7 +14,7 @@ static int var_declaration_list(struct symtable *funcsym, int class,
 
 // When this function is called, the current token
 // should be T_STRUCT
-static struct symtable *struct_declaration(void) {
+static struct symtable *composite_declaration(int type) {
   struct symtable *ctype = NULL;
   struct symtable *m;
   int offset;
@@ -22,7 +22,12 @@ static struct symtable *struct_declaration(void) {
   scan(&Token);
 
   if (Token.token == T_IDENT) {
-    ctype = findstruct(Text);
+    if (type == P_STRUCT)
+      ctype = findstruct(Text);
+    else if (type == P_UNION)
+      ctype = findunion(Text);
+    else
+      fatald("Unsupported composite type", type);
     scan(&Token);
   }
 
@@ -32,7 +37,7 @@ static struct symtable *struct_declaration(void) {
   if (Token.token != T_LBRACE) {
     if (ctype == NULL)
       // Using an undefined struct
-      fatals("Unknown struct type", Text); 
+      fatals("Unknown struct/union type", Text); 
 
     return ctype;
   }
@@ -40,11 +45,15 @@ static struct symtable *struct_declaration(void) {
   // Ensure that this struct has not already been
   // defined
   if (ctype)
-    fatals("Previously defined struct", Text);
+    fatals("Previously defined struct/union", Text);
 
-  // Build the struct node and skip the left brace
-  ctype = addstruct(Text, P_STRUCT, NULL, 0, 0);
+  // Build the composite and skip the left brace
+  if (type == P_STRUCT)
+    ctype = addstruct(Text, P_STRUCT, NULL, 0, 0);
+  else
+    ctype = addunion(Text, P_UNION, NULL, 0, 0); 
   scan(&Token);
+
   // Parse the members and populate the Memb symtable list
   var_declaration_list(NULL, C_MEMBER, T_SEMI, T_RBRACE);
   rbrace();
@@ -57,14 +66,20 @@ static struct symtable *struct_declaration(void) {
   offset = typesize(m->type, m->ctype);
 
   for (m = m->next; m != NULL; m = m->next) {
-    // Set the offset for the next member
-    m->posn = genalign(m->type, offset, 1);
+    if (type == P_STRUCT) {
+      // Set the offset for the next member
+      m->posn = genalign(m->type, offset, 1);
 
-    // Get the offset of the next free byte after this member
-    // Is this right implementation??
-    offset = m->posn + typesize(m->type, m->ctype);
-    // Below is incorrect?
-    // offset += typesize(m->type, m->ctype);
+      // Get the offset of the next free byte after this member
+      // Is this right implementation??
+      offset = m->posn + typesize(m->type, m->ctype);
+      // Below is incorrect?
+      // offset += typesize(m->type, m->ctype);
+    } else {
+      m->posn = 0;
+      // Incorrect? Union size should be the size of largest member
+      offset += typesize(m->type, m->ctype);
+    }
   }
 
   // Set the overall size of the struct
@@ -99,11 +114,11 @@ int parse_type(struct symtable **ctype) {
       type = P_STRUCT;
       // Look up an existing struct type, or parse the
       // declaration of a new struct type
-      *ctype = struct_declaration();
+      *ctype = composite_declaration(P_STRUCT);
       break;
     case T_UNION:
       type = P_UNION;
-      *ctype = struct_declaration();
+      *ctype = composite_declaration(P_UNION);
       break;
     default:
        fatald("Illegal type, token", Token.token);
@@ -301,9 +316,9 @@ void global_declarations(void) {
     // Get the type
     type = parse_type(&ctype);
 
-    // We might have parsed a struct declaration with no
+    // We might have parsed a struct/union declaration with no
     // associated variable.
-    if (type == P_STRUCT && Token.token == T_SEMI) {
+    if ((type == P_STRUCT || type == P_UNION) && Token.token == T_SEMI) {
       scan(&Token);
       continue;
     }

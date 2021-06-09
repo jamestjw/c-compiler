@@ -105,16 +105,18 @@ static struct ASTnode *member_access(int withpointer) {
   // (or a union)
   if ((compvar = findsymbol(Text)) == NULL)
     fatals("Undeclared variable", Text);
-  if (withpointer && compvar->type != pointer_to(P_STRUCT))
+  if (withpointer && compvar->type != pointer_to(P_STRUCT)
+      && compvar->type != pointer_to(P_UNION))
     fatals("Undeclared variable", Text);
-  if (!withpointer && compvar->type != P_STRUCT)
+  if (!withpointer && compvar->type != P_STRUCT &&
+      compvar->type != P_UNION)
     fatals("Undeclared variable", Text);
 
   // If we have a pointer to a struct, get the pointer's value.
   // Otherwise, make a leaf node to get the base address using
   // A_ADDR
   if (withpointer) {
-    left = mkastleaf(A_IDENT, pointer_to(P_STRUCT), compvar, 0);
+    left = mkastleaf(A_IDENT, pointer_to(compvar->type), compvar, 0);
   } else {
     left = mkastleaf(A_ADDR, compvar->type, compvar, 0);
   }
