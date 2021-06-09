@@ -18,6 +18,7 @@ extern struct symtable *Loclhead, *Locltail;	// Local variables
 extern struct symtable *Parmhead, *Parmtail;	// Local parameters
 extern struct symtable *Membhead, *Membtail;	  // Temp list of struct/union members
 extern struct symtable *Structhead, *Structtail; // List of struct types
+extern struct symtable *Unionhead, *Uniontail; // List of struct types
 
 extern int O_dumpAST;     // Flag controlling debug output of AST trees
 extern int O_keepasm;		  // Flag controlling whether we keep any assembly files

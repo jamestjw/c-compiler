@@ -43,7 +43,7 @@ enum {
 
   // Other keywords
   T_IF, T_ELSE, T_WHILE,
-  T_FOR, T_RETURN, T_STRUCT,
+  T_FOR, T_RETURN, T_STRUCT, T_UNION,
 };
 
 // AST node types
@@ -105,7 +105,7 @@ struct symtable {
 // 0b110010 is an **int and so on
 enum {
   P_NONE, P_VOID=16, P_CHAR=32, P_INT=48, P_LONG=64,
-  P_STRUCT = 80,
+  P_STRUCT=80, P_UNION=96,
 };
 
 // Structural types
@@ -119,5 +119,6 @@ enum {
   C_PARAM,      // Locally visible function parameter
   C_STRUCT,
   C_MEMBER,
+  C_UNION,
 };
 

@@ -101,6 +101,10 @@ int parse_type(struct symtable **ctype) {
       // declaration of a new struct type
       *ctype = struct_declaration();
       break;
+    case T_UNION:
+      type = P_UNION;
+      *ctype = struct_declaration();
+      break;
     default:
        fatald("Illegal type, token", Token.token);
   }
