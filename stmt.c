@@ -48,15 +48,15 @@ struct ASTnode *while_statement(void) {
 
   // Parse the conditional expression
   // and the subsequent ')'.
-  // TODO: For now, we ensure that the operation
-  // is a comparison
   condAST = binexpr(0);
   if (condAST->op < A_EQ || condAST->op > A_GE)
-    fatal("Bad comparison operator in 'while' statement");
+    condAST = mkastunary(A_TOBOOL, condAST->type, condAST, NULL, 0);
   rparen();
 
   // Parse the body of the while statement
+  Looplevel++;
   bodyAST = compound_statement();
+  Looplevel--;
 
   return mkastnode(A_WHILE, P_NONE, condAST, NULL, bodyAST, NULL, 0);
 }
@@ -85,7 +85,9 @@ static struct ASTnode *for_statement(void) {
   rparen();
 
   // Get the body
+  Looplevel++;
   bodyAST = compound_statement();
+  Looplevel--;
 
   // TODO: For now all 4 subtrees have to be non-null.
   // We can improve this in the future.
@@ -119,6 +121,20 @@ static struct ASTnode *return_statement(void) {
   return tree;
 }
 
+static struct ASTnode *break_statement(void) {
+  if (Looplevel == 0)
+    fatal("No loop to break out from");
+  scan(&Token);
+  return mkastleaf(A_BREAK, 0, NULL, 0);
+}
+
+static struct ASTnode *continue_statement(void) {
+  if (Looplevel == 0)
+    fatal("No loop to continue to");
+  scan(&Token);
+  return mkastleaf(A_CONTINUE, 0, NULL, 0);
+}
+
 static struct ASTnode *single_statement(void) {
   int type, class = C_LOCAL;
   struct symtable *ctype;
@@ -147,6 +163,10 @@ static struct ASTnode *single_statement(void) {
       return for_statement();
     case T_RETURN:
       return return_statement();
+    case T_BREAK:
+      return break_statement();
+    case T_CONTINUE:
+      return continue_statement();
     default:
       // TODO: `2 + 3;` is treated as a valid statement
       // for now, to fix soon.
@@ -168,7 +188,8 @@ struct ASTnode *compound_statement(void) {
     // Some statements must be followed by a semicolon
     if (tree != NULL && 
         (tree->op == A_ASSIGN ||
-         tree->op == A_RETURN || tree->op == A_FUNCCALL))
+         tree->op == A_RETURN || tree->op == A_FUNCCALL ||
+         tree->op == A_BREAK || tree->op == A_CONTINUE))
       semi();
 
     if (tree != NULL) {

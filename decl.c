@@ -8,6 +8,7 @@
 #include "types.h"
 
 struct symtable *Functionid;
+int Looplevel;
 
 int parse_type(struct symtable **ctype, int *class);
 static int var_declaration_list(struct symtable *funcsym, int class, 
@@ -415,6 +416,7 @@ struct ASTnode *function_declaration(int type) {
   Functionid = oldfuncsym;
 
   // Parse function body
+  Looplevel = 0;
   tree = compound_statement();
 
   // If the function type is not P_VOID,
@@ -473,7 +475,7 @@ void global_declarations(void) {
         fprintf(stdout, "\n\n");
       }
 
-      genAST(tree, NOREG, 0);
+      genAST(tree, NOLABEL, NOLABEL, NOLABEL, 0);
 
       freeloclsyms();
     } else {
