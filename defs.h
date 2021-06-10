@@ -11,6 +11,7 @@
 #define AOUT "a.out"
 #define ASCMD "as -o"
 #define LDCMD "cc -o" 
+#define CPPCMD "cpp -nostdinc -isystem"
 
 // For now, a token represents the 4 basic math operators and decimal whole numbers only.
 struct token {
@@ -44,7 +45,7 @@ enum {
   // Other keywords
   T_IF, T_ELSE, T_WHILE,
   T_FOR, T_RETURN, T_STRUCT, T_UNION,
-  T_ENUM, T_TYPEDEF,
+  T_ENUM, T_TYPEDEF, T_EXTERN,
 };
 
 // AST node types
@@ -118,6 +119,7 @@ enum {
   C_GLOBAL = 1, // Globally visible symbol
   C_LOCAL,      // Locally visible symbol
   C_PARAM,      // Locally visible function parameter
+  C_EXTERN,     // External globally visible symbol
   C_STRUCT,
   C_UNION,
   C_MEMBER,     // Member of a struct or a union

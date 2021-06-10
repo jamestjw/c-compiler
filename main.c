@@ -15,6 +15,7 @@ int Line;
 int Putback;
 FILE *Infile;
 FILE *Outfile;
+char *Infilename;
 char *Outfilename;
 
 int O_dumpAST;
@@ -69,17 +70,23 @@ static char *alter_suffix(char *str, char suffix) {
 // down to assembly code and return the resulting
 // file's name
 static char *do_compile(char *filename) {
+  char cmd[TEXTLEN];
+
   Outfilename = alter_suffix(filename, 's');
   if (Outfilename == NULL) {
     fprintf(stderr, "Error: %s has no suffix, try appending .c at the end the input filename.\n", filename);
     exit(1);
   }
 
-  // Open input file
-  if ((Infile = fopen(filename, "r")) == NULL) {
+  // Preprocessor command
+  // INCDIR defined in Makefile
+  snprintf(cmd, TEXTLEN, "%s %s %s", CPPCMD, INCDIR, filename);
+
+  if ((Infile = popen(cmd, "r")) == NULL) {
     fprintf(stderr, "Unable to open %s: %s\n", filename, strerror(errno));
     exit(1);
   }
+  Infilename = filename;
 
   if ((Outfile = fopen(Outfilename, "w")) == NULL) {
     fprintf(stderr, "Unable to create %s: %s\n", Outfilename, strerror(errno));

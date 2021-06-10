@@ -9,7 +9,7 @@
 
 struct symtable *Functionid;
 
-int parse_type(struct symtable **ctype);
+int parse_type(struct symtable **ctype, int *class);
 static int var_declaration_list(struct symtable *funcsym, int class, 
     int separate_token, int end_token);
 
@@ -152,13 +152,16 @@ static void enum_declaration(void) {
 // Parse a typedef definition and return the type
 // and ctype it represents
 static int typedef_declaration(struct symtable **ctype) {
-  int type;
+  int type, class=0;
 
   // Consume the typedef keyword
   scan(&Token);
 
   // Get the actual type following the `typedef` keyword
-  type = parse_type(ctype);
+  type = parse_type(ctype, &class);
+  if (class != 0) {
+    fatal("Can't have extern in a typedef declaration");
+  }
 
   if (findtypedef(Text) != NULL)
     fatals("Redefinition of typedef", Text);
@@ -183,8 +186,20 @@ static int type_of_typedef(char *name, struct symtable **ctype) {
 
 // Parse the current token and 
 // return a primitive type enum value
-int parse_type(struct symtable **ctype) {
-  int type;
+int parse_type(struct symtable **ctype, int *class) {
+  int type, exstatic = 1;
+
+  // See if the class has been changed to extern (later, static)
+  while (exstatic) {
+    switch (Token.token) {
+      case T_EXTERN: 
+        *class = C_EXTERN;
+        scan(&Token);
+        break;
+      default:
+        exstatic = 0;
+    }
+  }
 
   switch (Token.token) {
     case T_VOID: 
@@ -254,6 +269,7 @@ struct symtable *var_declaration(int type, struct symtable *ctype, int class) {
   struct symtable *sym = NULL;
 
   switch (class) {
+    case C_EXTERN:
     case C_GLOBAL:
       if (findglob(Text) != NULL)
         fatals("Duplicate global variable declaration", Text);
@@ -271,8 +287,9 @@ struct symtable *var_declaration(int type, struct symtable *ctype, int class) {
     // TODO: Must provide size for now
     if (Token.token == T_INTLIT) {
       switch (class) {
+        case C_EXTERN:
         case C_GLOBAL:
-          sym = addglob(Text, pointer_to(type), ctype, S_ARRAY, Token.intvalue);
+          sym = addglob(Text, pointer_to(type), ctype, S_ARRAY, class, Token.intvalue);
           break;
         case C_LOCAL:
         case C_PARAM:
@@ -285,8 +302,9 @@ struct symtable *var_declaration(int type, struct symtable *ctype, int class) {
     match(T_RBRACKET, "]");
   } else {
     switch (class) {
+      case C_EXTERN:
       case C_GLOBAL:
-        sym = addglob(Text, type, ctype, S_VARIABLE, 1);
+        sym = addglob(Text, type, ctype, S_VARIABLE, class, 1);
         break;
       case C_LOCAL:
         sym = addlocl(Text, type, ctype, S_VARIABLE, 1);
@@ -323,7 +341,7 @@ static int var_declaration_list(struct symtable *funcsym, int class,
 
   // Loop until we hit the right parenthesis
   while (Token.token != end_token) {
-    type = parse_type(&ctype);
+    type = parse_type(&ctype, &class);
     ident();
 
     // If prototype already exists, check that the types match
@@ -367,7 +385,7 @@ struct ASTnode *function_declaration(int type) {
   // for the end label and add the fucntion to the symbol table
   if (oldfuncsym == NULL) {
     endlabel = genlabel();
-    newfuncsym = addglob(Text, type, NULL, S_FUNCTION, endlabel);
+    newfuncsym = addglob(Text, type, NULL, S_FUNCTION, C_GLOBAL, endlabel);
   }
 
   lparen();
@@ -417,7 +435,7 @@ struct ASTnode *function_declaration(int type) {
 void global_declarations(void) {
   struct ASTnode *tree;
   struct symtable *ctype;
-  int type;
+  int type, class = C_GLOBAL;
 
   while (1) {
     // We have to first parse the type and identifier
@@ -428,7 +446,7 @@ void global_declarations(void) {
       break;
     
     // Get the type
-    type = parse_type(&ctype);
+    type = parse_type(&ctype, &class);
 
     // We might have just parsed a struct, union, or
     // enum declaration with no associated variable
@@ -460,7 +478,7 @@ void global_declarations(void) {
       freeloclsyms();
     } else {
       // Dealing with variable declaration
-      var_declaration(type, ctype, C_GLOBAL);
+      var_declaration(type, ctype, class);
       semi();
     }
   }

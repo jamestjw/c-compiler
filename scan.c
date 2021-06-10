@@ -12,7 +12,7 @@ static struct token *Rejtoken = NULL;
 
 // Get the next char from the input file.
 static int next(void) {
-  int c;
+  int c, l;
 
   // If a character was previously asked to be put back,
   // we now return that character and reset the Putback
@@ -26,6 +26,34 @@ static int next(void) {
   // If no character was asked to be putback, we get a new
   // character from the input stream.
   c = fgetc(Infile);
+
+  while (c == '#') { // Hit a preprocessor statement
+    scan(&Token);
+
+    // This is the line number of the following line
+    if (Token.token != T_INTLIT)
+      fatals("Expecting pre-processor line number, got", Text);
+    l = Token.intvalue;
+    
+    scan(&Token);
+    // The file from which the following line is from
+    if (Token.token != T_STRLIT)
+      fatals("Expecting pre-processor filename, got", Text);
+
+    // Check if this is a real filename
+    if (Text[0] != '<') {
+      // Update the filename if it does not match
+      // the current one we have
+      if (strcmp(Text, Infilename))
+        Infilename = strdup(Text);
+      // Update the line number
+      Line = l;
+    }
+
+    // Skip to EOL
+    while ((c = fgetc(Infile)) != '\n');
+    c = fgetc(Infile);
+  }
 
   // Track what line we are on for the purposes
   // of printing debug messages.
