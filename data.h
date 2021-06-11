@@ -15,6 +15,7 @@ extern char Text[TEXTLEN + 1];
 extern struct symtable *Functionid;             // Current function symtable entry
 
 extern int Looplevel;  // Depth of nested loops
+extern int Switchlevel;  // Depth of switches 
 
 // Symbol table lists
 extern struct symtable *Globhead, *Globtail;	    // Global variables and functions

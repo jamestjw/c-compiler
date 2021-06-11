@@ -1,1 +1,1 @@
-Undeclared enum type:fred on line 1
+Undeclared enum type:fred on line 1 of input64.c

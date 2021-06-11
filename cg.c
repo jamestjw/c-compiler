@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "data.h"
 #include "cg.h"
+#include "gen.h"
 #include "misc.h"
 #include "types.h"
 
@@ -89,6 +90,33 @@ static int newlocaloffset(int type) {
 
 void cgpreamble() {
   freeall_registers();
+  cgtextseg();
+    fprintf(Outfile,
+	  "# internal switch(expr) routine\n"
+	  "# %%rsi = switch table, %%rax = expr\n"
+	  "# from SubC: http://www.t3x.org/subc/\n"
+	  "\n"
+	  "switch:\n"
+	  "        pushq   %%rsi\n"
+	  "        movq    %%rdx, %%rsi\n"
+	  "        movq    %%rax, %%rbx\n"
+	  "        cld\n"
+	  "        lodsq\n"
+	  "        movq    %%rax, %%rcx\n"
+	  "next:\n"
+	  "        lodsq\n"
+	  "        movq    %%rax, %%rdx\n"
+	  "        lodsq\n"
+	  "        cmpq    %%rdx, %%rbx\n"
+	  "        jnz     no\n"
+	  "        popq    %%rsi\n"
+	  "        jmp     *%%rax\n"
+	  "no:\n"
+	  "        loop    next\n"
+	  "        lodsq\n"
+	  "        popq    %%rsi\n" 
+    "        jmp     *%%rax\n" 
+    "\n");
 }
 
 void cgfuncpreamble(struct symtable *sym) {
@@ -715,4 +743,39 @@ int cgalign(int type, int offset, int direction) {
   offset = (offset + direction * (alignment - 1)) & ~(alignment - 1);
 
   return offset;
+}
+
+void cgswitch(int reg, int casecount, int toplabel,
+              int *caselabel, int *caseval, int defaultlabel) {
+  int i, label;
+
+  label = genlabel();
+  cglabel(label);
+
+  // If we have no cases, create a single default case.
+  if (casecount == 0) {
+    caseval[0] = 0;
+    caselabel[0] = defaultlabel;
+    casecount = 1;
+  }
+
+  // Set up jump table 
+  // L14:                                  # Switch jump table
+  //       .quad   3                       # Three case values
+  //       .quad   1, L10                  # case 1: jump to L10
+  //       .quad   2, L11                  # case 2: jump to L11
+  //       .quad   3, L12                  # case 3: jump to L12
+  //       .quad   L13                     # default: jump to L13
+  fprintf(Outfile, "\t.quad\t%d\n", casecount);
+  for (i = 0; i < casecount; i++)
+    fprintf(Outfile, "\t.quad\t%d, L%d\n", caseval[i], caselabel[i]);
+  fprintf(Outfile, "\t.quad\tL%d\n", defaultlabel);
+
+  cglabel(toplabel);
+  //      movq %r10, %rax           # Load the switch condition in %rax
+  //      leaq L14(%rip), %rdx      # Load the base of jump table in rdx
+  //      jmp switch
+  fprintf(Outfile, "\tmovq\t%s, %%rax\n", reglist[reg]);
+  fprintf(Outfile, "\tleaq\tL%d(%%rip), %%rdx\n", label);
+  fprintf(Outfile, "\tjmp\tswitch\n");
 }

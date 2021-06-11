@@ -112,6 +112,54 @@ static int gen_funccall(struct ASTnode *n) {
   return cgcall(n->sym, numargs);
 }
 
+static int genSWITCH(struct ASTnode *n) {
+  int *caseval, *caselabel;
+  int Ljumptop, Lend;
+  int i, reg, defaultlabel = 0, casecount = 0;
+  struct ASTnode *c;
+
+  // Create arrays for case values and their corresponding
+  // labels.
+  caseval = (int *) malloc((n->intvalue + 1) * sizeof(int));
+  caselabel = (int *) malloc((n->intvalue + 1) * sizeof(int));
+
+  Ljumptop = genlabel();
+  Lend = genlabel();
+  // Set default label to Lend for now,
+  // we will check later if a default
+  // case is available.
+  defaultlabel = Lend; 
+
+  reg = genAST(n->left, NOLABEL, NOLABEL, NOLABEL, 0);
+  cgjump(Ljumptop);
+  genfreeregs();
+
+  for (i = 0, c = n->right; c != NULL; i++, c = c->right) {
+    caselabel[i] = genlabel();
+    caseval[i] = c->intvalue;
+    cglabel(caselabel[i]);
+    if (c->op == A_DEFAULT)
+      // Update default label with the right label
+      defaultlabel = caselabel[i];
+    else
+      casecount++;
+
+    // Passing in the end label to allow breaks
+    genAST(c->left, NOLABEL, NOLABEL, Lend, 0);
+    genfreeregs();
+  }
+
+  // Include a jump to the end of the switch after the last
+  // branch.
+  cgjump(Lend);
+
+  cgswitch(reg, casecount, Ljumptop, caselabel, caseval, defaultlabel);
+
+  cglabel(Lend);
+
+  return NOREG;
+}
+
 // Given an AST node, recursively generate assembly
 // code for it. Returns the identifier of the register
 // that contains the results of evaluating this node.
@@ -143,6 +191,8 @@ int genAST(struct ASTnode *n, int iflabel,
       return NOREG;
     case A_FUNCCALL:
       return gen_funccall(n);
+    case A_SWITCH:
+      return genSWITCH(n);
   }
 
   if (n->left) leftreg = genAST(n->left, NOLABEL, NOLABEL, NOLABEL, n->op);

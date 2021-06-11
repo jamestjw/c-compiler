@@ -135,6 +135,84 @@ static struct ASTnode *continue_statement(void) {
   return mkastleaf(A_CONTINUE, 0, NULL, 0);
 }
 
+static struct ASTnode *switch_statement(void) {
+  struct ASTnode *left, *n, *c, *casetree = NULL, *casetail;
+  int inloop = 1, casecount = 0;
+  int seendefault = 0;
+  int ASTop, casevalue;
+
+  // Consume the 'switch' and '('
+  scan(&Token);
+  lparen();
+
+  left = binexpr(0);
+  rparen();
+  lbrace();
+
+  if (!inttype(left->type))
+    fatal("Switch expression is not of integer type");
+
+  // Build A_SWITCH subtree with the expression as the child
+  n = mkastunary(A_SWITCH, 0, left, NULL, 0);
+
+  Switchlevel++;
+  while(inloop) {
+    switch (Token.token) {
+      case T_RBRACE:
+        // End of switch if we encounter R_BRACE
+        if (casecount == 0)
+          fatal("No cases in switch");
+        inloop = 0;
+        break;
+      case T_CASE:
+      case T_DEFAULT: {
+        if (seendefault)
+          fatal("Case or default after existing default");
+        if (Token.token == T_DEFAULT) {
+          ASTop = A_DEFAULT;
+          seendefault = 1;
+          scan(&Token);
+        } else {
+          ASTop = A_CASE;
+          scan(&Token);
+          left = binexpr(0);
+          if (left->op != A_INTLIT)
+            fatal("Expecting integer literal for case value");
+          casevalue = left->intvalue;
+
+          for (c = casetree; c != NULL; c = c->right)
+            if (casevalue == c->intvalue)
+              fatal("Duplicate case value");
+        }
+        
+        match(T_COLON, ":");
+        left = compound_statement();
+        casecount++;
+
+        // Build subtree with compound statement as left child
+        // and link to the A_CASE tree
+        if (casetree == NULL) {
+          casetree = casetail = mkastunary(ASTop, 0, left, NULL, casevalue);
+        } else {
+          casetail->right = mkastunary(ASTop, 0, left, NULL, casevalue);
+          casetail = casetail->right;
+        }
+        break;
+      }
+      default:
+        fatald("Unexpected token in switch", Token.token);
+    }
+  }
+
+  Switchlevel--;
+
+  n->intvalue = casecount;
+  n->right = casetree;
+  rbrace();
+
+  return n;
+}
+
 static struct ASTnode *single_statement(void) {
   int type, class = C_LOCAL;
   struct symtable *ctype;
@@ -167,6 +245,8 @@ static struct ASTnode *single_statement(void) {
       return break_statement();
     case T_CONTINUE:
       return continue_statement();
+    case T_SWITCH:
+      return switch_statement();
     default:
       // TODO: `2 + 3;` is treated as a valid statement
       // for now, to fix soon.

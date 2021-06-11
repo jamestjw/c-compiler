@@ -45,21 +45,21 @@ void comma(void) {
 }
 
 void fatal(char *s) {
-  fprintf(stderr, "%s on line %d\n", s, Line); 
+  fprintf(stderr, "%s on line %d of %s\n", s, Line, Infilename); 
   fclose(Outfile);
   unlink(Outfilename);
   exit(1);
 }
 
 void fatals(char *s1, char* s2) {
-  fprintf(stderr, "%s:%s on line %d\n", s1, s2, Line);
+  fprintf(stderr, "%s:%s on line %d of %s\n", s1, s2, Line, Infilename);
   fclose(Outfile);
   unlink(Outfilename);
   exit(1);
 }
 
 void fatald(char *s, int d) {
-  fprintf(stderr, "%s:%d on line %d\n", s, d, Line);
+  fprintf(stderr, "%s:%d on line %d of %s\n", s, d, Line, Infilename);
   fclose(Outfile);
   unlink(Outfilename);
   exit(1);

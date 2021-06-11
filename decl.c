@@ -9,6 +9,7 @@
 
 struct symtable *Functionid;
 int Looplevel;
+int Switchlevel;
 
 int parse_type(struct symtable **ctype, int *class);
 static int var_declaration_list(struct symtable *funcsym, int class, 
@@ -295,7 +296,7 @@ struct symtable *var_declaration(int type, struct symtable *ctype, int class) {
         case C_LOCAL:
         case C_PARAM:
         case C_MEMBER:
-          fatal("TODO: Implement support for local arrays.");
+          fatal("TODO: Implement support for local arrays");
       }
     }
     // Consume int literal

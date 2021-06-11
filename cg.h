@@ -81,3 +81,6 @@ int cgloadlocal(struct symtable *sym, int op);
 int cgstorlocal(int r, struct symtable *sym);
 void cgcopyarg(int r, int argposn);
 int cgalign(int type, int offset, int direction);
+void cgswitch(int reg, int casecount, int toplabel,
+              int *caselabel, int *caseval, int defaultlabel);
+
