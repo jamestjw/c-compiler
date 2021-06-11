@@ -27,13 +27,13 @@ struct ASTnode *if_statement(void) {
   rparen();
 
   // AST for the compound statement for the TRUE clause
-  trueAST = compound_statement();
+  trueAST = single_statement();
 
   // Check for the presence of an 'else' token and 
   // parse the statement for the FALSE clause
   if (Token.token == T_ELSE) {
     scan(&Token);
-    falseAST = compound_statement();
+    falseAST = single_statement();
   }
 
   return mkastnode(A_IF, P_NONE, condAST, trueAST, falseAST, NULL, 0);
@@ -55,7 +55,7 @@ struct ASTnode *while_statement(void) {
 
   // Parse the body of the while statement
   Looplevel++;
-  bodyAST = compound_statement();
+  bodyAST = single_statement();
   Looplevel--;
 
   return mkastnode(A_WHILE, P_NONE, condAST, NULL, bodyAST, NULL, 0);
@@ -71,7 +71,7 @@ static struct ASTnode *for_statement(void) {
   lparen();
 
   // Parse the pre_op statement and the ';'
-  preopAST = single_statement();
+  preopAST = expression_list(T_SEMI);
   semi();
 
   // Parse the condition and the ';'
@@ -81,12 +81,12 @@ static struct ASTnode *for_statement(void) {
   semi();
 
   // Get the post_op statement and the ')'
-  postopAST = single_statement();
+  postopAST = expression_list(T_RPAREN);
   rparen();
 
   // Get the body
   Looplevel++;
-  bodyAST = compound_statement();
+  bodyAST = single_statement();
   Looplevel--;
 
   // TODO: For now all 4 subtrees have to be non-null.
@@ -117,14 +117,16 @@ static struct ASTnode *return_statement(void) {
   tree = mkastunary(A_RETURN, P_NONE, tree, NULL, 0);
   
   rparen();
+  semi();
 
   return tree;
 }
 
 static struct ASTnode *break_statement(void) {
-  if (Looplevel == 0)
+  if (Looplevel == 0 && Switchlevel == 0)
     fatal("No loop to break out from");
   scan(&Token);
+  semi();
   return mkastleaf(A_BREAK, 0, NULL, 0);
 }
 
@@ -132,6 +134,7 @@ static struct ASTnode *continue_statement(void) {
   if (Looplevel == 0)
     fatal("No loop to continue to");
   scan(&Token);
+  semi();
   return mkastleaf(A_CONTINUE, 0, NULL, 0);
 }
 
@@ -186,7 +189,7 @@ static struct ASTnode *switch_statement(void) {
         }
         
         match(T_COLON, ":");
-        left = compound_statement();
+        left = compound_statement(1);
         casecount++;
 
         // Build subtree with compound statement as left child
@@ -200,7 +203,7 @@ static struct ASTnode *switch_statement(void) {
         break;
       }
       default:
-        fatald("Unexpected token in switch", Token.token);
+        fatals("Unexpected token in switch", Token.tokstr);
     }
   }
 
@@ -216,11 +219,21 @@ static struct ASTnode *switch_statement(void) {
 static struct ASTnode *single_statement(void) {
   int type, class = C_LOCAL;
   struct symtable *ctype;
+  struct ASTnode *stmt = NULL;
 
   switch (Token.token) {
+    case T_LBRACE:
+      lbrace();
+      stmt = compound_statement(0);
+      rbrace();
+      return stmt;
     case T_IDENT:
-      if (findtypedef(Text) == NULL)
-        return binexpr(0);
+      if (findtypedef(Text) == NULL) {
+        stmt = binexpr(0);
+        semi();
+        return stmt;
+      }
+      // Falldown to parse type call otherwise
     case T_CHAR:
     case T_INT:
     case T_LONG:
@@ -252,25 +265,20 @@ static struct ASTnode *single_statement(void) {
       // for now, to fix soon.
       //
       // Handle assignment statements
-      return binexpr(0);
+      stmt = binexpr(0);
+      semi();
+      return stmt;
   }
+
+  return NULL;
 }
 
-struct ASTnode *compound_statement(void) {
+struct ASTnode *compound_statement(int inswitch) {
   struct ASTnode *left = NULL;
   struct ASTnode *tree;
-  
-  lbrace();
 
   while (1) {
     tree = single_statement();
-
-    // Some statements must be followed by a semicolon
-    if (tree != NULL && 
-        (tree->op == A_ASSIGN ||
-         tree->op == A_RETURN || tree->op == A_FUNCCALL ||
-         tree->op == A_BREAK || tree->op == A_CONTINUE))
-      semi();
 
     if (tree != NULL) {
       if (left == NULL)
@@ -280,7 +288,12 @@ struct ASTnode *compound_statement(void) {
     }
 
     if (Token.token == T_RBRACE) {
-      rbrace();
+      return left;
+    }
+
+    // In switch statements, it is fine to not have braces
+    // around multiline statements
+    if (inswitch && (Token.token == T_CASE || Token.token == T_DEFAULT)) {
       return left;
     }
   }

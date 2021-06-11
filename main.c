@@ -102,7 +102,7 @@ static char *do_compile(char *filename) {
 
   scan(&Token);
   genpreamble();
-  global_declarations(); 
+  global_declarations();
   genpostamble();
 
   fclose(Outfile);

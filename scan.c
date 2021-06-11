@@ -10,6 +10,21 @@ char Text[TEXTLEN + 1];
 // Pointer to a rejected token
 static struct token *Rejtoken = NULL;
 
+// List of token strings, for debugging purposes
+char *Tstring[] = {
+  "EOF", "=", "||", "&&", "|", "^", "&",
+  "==", "!=", ",", ">", "<=", ">=", "<<", ">>",
+  "+", "-", "*", "/", "++", "--", "~", "!",
+  "void", "char", "int", "long",
+  "if", "else", "while", "for", "return",
+  "struct", "union", "enum", "typedef",
+  "extern", "break", "continue", "switch",
+  "case", "default",
+  "intlit", "strlit", ";", "identifier",
+  "{", "}", "(", ")", "[", "]", ",", ".",
+  "->", ":"
+};
+
 // Get the next char from the input file.
 static int next(void) {
   int c, l;
@@ -428,6 +443,7 @@ int scan(struct token *t) {
       fatalc("Unrecognised character", c);
   }
 
+  t->tokstr = Tstring[t->token];
   return 1;
 }
 

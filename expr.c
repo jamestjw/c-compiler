@@ -391,13 +391,13 @@ struct ASTnode *binexpr(int ptp) {
   return left;
 }
 
-static struct ASTnode *expression_list(void) {
+struct ASTnode *expression_list(int endtoken) {
   struct ASTnode *tree = NULL;
   struct ASTnode *child = NULL;
   int exprcount = 0;
 
   // Loop until we hit right parenthesis
-  while (Token.token != T_RPAREN) {
+  while (Token.token != endtoken) {
     child = binexpr(0);
     exprcount++;
 
@@ -405,15 +405,9 @@ static struct ASTnode *expression_list(void) {
     // and the new expression as the right child
     tree = mkastnode(A_GLUE, P_NONE, tree, NULL, child, NULL, exprcount);
 
-    switch (Token.token) {
-      case T_COMMA:
-        scan(&Token);
-        break;
-      case T_RPAREN:
-        break;
-      default:
-        fatald("Unexpected token in expression list", Token.token);
-    }
+    if (Token.token == endtoken) break;
+
+    match(T_COMMA, ",");
   }
 
   return tree;
@@ -431,7 +425,7 @@ struct ASTnode *funccall(void) {
 
   lparen();
   // Parse the argument expression list
-  tree = expression_list();
+  tree = expression_list(T_RPAREN);
 
 
   // TODO: Check argument type against function prototype

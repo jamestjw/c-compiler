@@ -1,1 +1,1 @@
-struct ASTnode *compound_statement(void);
+struct ASTnode *compound_statement(int inswitch);
