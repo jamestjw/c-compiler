@@ -228,7 +228,7 @@ static struct ASTnode *primary(void) {
 
       return n;
     default:
-      fatald("Syntax error, token", Token.token);
+      fatals("Syntax error, token", Token.tokstr);
   }
   
   scan(&Token);

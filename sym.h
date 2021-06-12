@@ -25,6 +25,7 @@ struct symtable *findunion(char *s);
 struct symtable *findenumtype(char *s);
 struct symtable *findenumval(char *s);
 struct symtable *findtypedef(char *s);
+struct symtable *findmember(char *s);
 
 // Find a symbol within the symbol table, return
 //its slot position or -1 if not found

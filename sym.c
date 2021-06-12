@@ -181,6 +181,12 @@ struct symtable *findtypedef(char *s) {
   return (findsyminlist(s, Typehead, 0));
 }
 
+// Find a member in the member list
+// Return a pointer to the found node or NULL if not found.
+struct symtable *findmember(char *s) {
+  return (findsyminlist(s, Membhead, 0));
+}
+
 void clear_symtable(void) {
   Globhead = Globtail = NULL;
   Loclhead = Locltail = NULL;
