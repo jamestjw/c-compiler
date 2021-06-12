@@ -11,7 +11,7 @@ struct ASTnode *mkastnode(int op,
                           struct symtable *sym,
                           int intvalue) {
   struct ASTnode *n;
-  
+
   n = (struct ASTnode *) malloc(sizeof(struct ASTnode));
 
   if (n == NULL) {
@@ -37,7 +37,7 @@ struct ASTnode *mkastleaf(int op, int type, struct symtable *sym, int intvalue) 
 }
 
 // Make a unary AST node
-struct ASTnode *mkastunary(int op, int type, struct ASTnode *left, 
+struct ASTnode *mkastunary(int op, int type, struct ASTnode *left,
     struct symtable *sym, int intvalue) {
   return mkastnode(op, type, left, NULL, NULL, sym, intvalue);
 }

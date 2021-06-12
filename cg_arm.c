@@ -34,7 +34,7 @@ void freeall_registers(void) {
 
 // Array of sizes of primitives
 static int psize[] = {
-  0, // P_NONE 
+  0, // P_NONE
   0, // P_VOID
   1, // P_CHAR
   4, // P_INT
@@ -115,8 +115,8 @@ void cgfuncpreamble(char *name) {
     //   .text
     //   .globl        main
     //   .type         main, %function
-    //   main:         push  {fp, lr}          # Save the frame pointer of calling function and return address 
-    //                 add   fp, sp, #4        # Set up frame pointer for this function 
+    //   main:         push  {fp, lr}          # Save the frame pointer of calling function and return address
+    //                 add   fp, sp, #4        # Set up frame pointer for this function
     //                 sub   sp, sp, #8        # Lower the stack pointer by 8
     //                 str   r0, [fp, #-8]     # Copy argument to stack
 
@@ -124,7 +124,7 @@ void cgfuncpreamble(char *name) {
           "\t.text\n"
           "\t.globl\t%s\n"
           "\t.type\t%s, \%%function\n"
-          "%s:\n" 
+          "%s:\n"
           "\tpush\t{fp, lr}\n"
           "\tadd\tfp, sp, #4\n"
           "\tsub\tsp, sp, #8\n"
@@ -139,7 +139,7 @@ void cgfuncpostamble(int id) {
   fputs(
       "\tsub\tsp, fp, #4\n"
       "\tpop\t{fp, pc}\n"
-      "\t.align\t2\n", Outfile);       
+      "\t.align\t2\n", Outfile);
 }
 
 void cgpostamble() {
@@ -343,7 +343,7 @@ void cgjump(int l) {
 int cgcompare_and_jump(int ASTop, int r1, int r2, int label) {
    if (ASTop < A_EQ || ASTop > A_GE)
     fatal("Bad ASTop in cgcompare_and_jump()");
-  
+
    // cmpq r1, r2
    fprintf(Outfile, "\tcmp\t%s, %s\n", reglist[r1], reglist[r2]);
    // bne L1

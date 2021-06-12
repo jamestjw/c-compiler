@@ -2,6 +2,7 @@
 #include "gen.h"
 #include "misc.h"
 #include "sym.h"
+#include "types.h"
 
 struct symtable *Globhead, *Globtail;
 struct symtable *Loclhead, *Locltail;
@@ -29,7 +30,7 @@ void appendsym(struct symtable **head, struct symtable **tail, struct symtable *
 }
 
 struct symtable *newsym(char *name, int type, struct symtable *ctype,
-    int stype, int class, int size, int posn) {
+    int stype, int class, int nelems, int posn) {
   struct symtable *node = (struct symtable *) malloc(sizeof(struct symtable));
   if (node == NULL)
     fatal("Unable to malloc a symtable node in newsym");
@@ -39,54 +40,64 @@ struct symtable *newsym(char *name, int type, struct symtable *ctype,
   node->ctype = ctype;
   node->stype = stype;
   node->class = class;
-  node->size = size;
+  node->nelems = nelems;
+
+  // For pointers and integer types, set the size of the symbol.
+  // Structs and unions declarations set this up themselves.
+  if (ptrtype(type) || inttype(type))
+    node->size = nelems * typesize(type, ctype);
+
   node->posn = posn;
   node->next = NULL;
   node->member = NULL;
-
-  if (class == C_GLOBAL)
-    genglobsym(node);
+  node->initlist = NULL;
 
   return node;
 }
 
-struct symtable *addglob(char *name, int type, struct symtable *ctype, 
-    int stype, int class, int size) {
-  struct symtable *sym = newsym(name, type, ctype, stype, class, size, 0);
+struct symtable *addglob(char *name, int type, struct symtable *ctype,
+    int stype, int class, int nelems, int posn) {
+  struct symtable *sym = newsym(name, type, ctype, stype, class, nelems, posn);
+
+  if (type == P_STRUCT || type == P_UNION)
+    sym->size = ctype->size;
+
   appendsym(&Globhead, &Globtail, sym);
   return sym;
 }
 
-struct symtable *addlocl(char *name, int type, struct symtable *ctype, 
-    int stype, int size) {
-  struct symtable *sym = newsym(name, type, ctype, stype, C_LOCAL, size, 0);
+struct symtable *addlocl(char *name, int type, struct symtable *ctype,
+    int stype, int nelems) {
+  struct symtable *sym = newsym(name, type, ctype, stype, C_LOCAL, nelems, 0);
+
+  if (type == P_STRUCT || type == P_UNION)
+    sym->size = ctype->size;
+
   appendsym(&Loclhead, &Locltail, sym);
   return sym;
 }
 
-struct symtable *addparm(char *name, int type, struct symtable *ctype, int stype, int size) {
-  struct symtable *sym = newsym(name, type, ctype, stype, C_PARAM, size, 0);
+struct symtable *addparm(char *name, int type, struct symtable *ctype, int stype) {
+  struct symtable *sym = newsym(name, type, ctype, stype, C_PARAM, 1, 0);
   appendsym(&Parmhead, &Parmtail, sym);
   return sym;
 }
 
 struct symtable *addmemb(char *name, int type, struct symtable *ctype,
-			 int stype, int size) {
-  struct symtable *sym = newsym(name, type, ctype, stype, C_MEMBER, size, 0);
+			 int stype, int nelems) {
+  struct symtable *sym = newsym(name, type, ctype, stype, C_MEMBER, nelems, 0);
   appendsym(&Membhead, &Membtail, sym);
   return sym;
 }
 
-struct symtable *addunion(char *name, int type, struct symtable *ctype,
-			   int stype, int size) {
-  struct symtable *sym = newsym(name, type, ctype, stype, C_UNION, size, 0);
+struct symtable *addunion(char *name) {
+  struct symtable *sym = newsym(name, P_UNION, NULL, 0, C_UNION, 0, 0);
   appendsym(&Unionhead, &Uniontail, sym);
   return sym;
 }
 
-struct symtable *addstruct(char *name, int type, struct symtable *ctype,
-			   int stype, int size) {
-  struct symtable *sym = newsym(name, type, ctype, stype, C_STRUCT, size, 0);
+struct symtable *addstruct(char *name) {
+  struct symtable *sym = newsym(name, P_STRUCT, NULL, 0, C_STRUCT, 0, 0);
   appendsym(&Structhead, &Structtail, sym);
   return sym;
 }
@@ -101,9 +112,8 @@ struct symtable *addenum(char *name, int class, int value) {
 }
 
 // Add a typedef to the typedef list
-struct symtable *addtypedef(char *name, int type, struct symtable *ctype,
-			   int stype, int size) {
-  struct symtable *sym = newsym(name, type, ctype, stype, C_TYPEDEF, size, 0);
+struct symtable *addtypedef(char *name, int type, struct symtable *ctype) {
+  struct symtable *sym = newsym(name, type, ctype, 0, C_TYPEDEF, 0, 0);
   appendsym(&Typehead, &Typetail, sym);
   return sym;
 }

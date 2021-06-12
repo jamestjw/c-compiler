@@ -8,10 +8,10 @@ static char *ASTop[] = { "+", "-", "*", "/" };
 
 int interpretAST(struct ASTnode *n) {
   int leftval, rightval;
-  
+
   if (n->left)
     leftval = interpretAST(n->left);
-  
+
   if (n->right)
     rightval = interpretAST(n->right);
 

@@ -72,7 +72,7 @@ static int genWHILE(struct ASTnode *n) {
   genAST(n->left, Lend, Lstart, Lend, n->op);
   genfreeregs();
 
-  // Generate code for the body 
+  // Generate code for the body
   genAST(n->right, NOLABEL, Lstart, Lend, n->op);
   genfreeregs();
 
@@ -128,7 +128,7 @@ static int genSWITCH(struct ASTnode *n) {
   // Set default label to Lend for now,
   // we will check later if a default
   // case is available.
-  defaultlabel = Lend; 
+  defaultlabel = Lend;
 
   reg = genAST(n->left, NOLABEL, NOLABEL, NOLABEL, 0);
   cgjump(Ljumptop);
@@ -164,8 +164,8 @@ static int genSWITCH(struct ASTnode *n) {
 // code for it. Returns the identifier of the register
 // that contains the results of evaluating this node.
 //
-// parentASTop - Operator of the parent AST node      
-int genAST(struct ASTnode *n, int iflabel, 
+// parentASTop - Operator of the parent AST node
+int genAST(struct ASTnode *n, int iflabel,
     int looptoplabel, int loopendlabel, int parentASTop) {
   // Registers containing the results of evaluating
   // the left and right child nodes
@@ -213,7 +213,7 @@ int genAST(struct ASTnode *n, int iflabel,
     case A_GT:
     case A_LE:
     case A_GE:
-      // If the parent node is an A_IF, generate a 
+      // If the parent node is an A_IF, generate a
       // compare and jump, otherwise compare registers
       // and set to either 0 or 1
       if (parentASTop == A_IF || parentASTop == A_WHILE)

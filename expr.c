@@ -14,7 +14,7 @@ struct token Token;
 // A bigger number indicates a higher precedence
 static int OpPrec[] = {
   0, 10, 20, 30,		// T_EOF, T_ASSIGN, T_LOGOR, T_LOGAND
-  40, 50, 60,			  // T_OR, T_XOR, T_AMPER 
+  40, 50, 60,			  // T_OR, T_XOR, T_AMPER
   70, 70,			      // T_EQ, T_NE
   80, 80, 80, 80,		// T_LT, T_GT, T_LE, T_GE
   90, 90,			      // T_LSHIFT, T_RSHIFT
@@ -26,7 +26,7 @@ static int OpPrec[] = {
 int binastop(int tokentype) {
   // For tokens in this range, there is a 1-1 mapping between
   // token type and node type
-  if (tokentype > T_EOF && tokentype < T_INTLIT) 
+  if (tokentype > T_EOF && tokentype < T_INTLIT)
     return tokentype;
 
   fatald("Syntax error, token", tokentype);
@@ -42,7 +42,7 @@ int binastop(int tokentype) {
 // that expectation is not met.
 static int op_precedence(int tokentype) {
   int prec = OpPrec[tokentype];
-  
+
   if (tokentype >= T_VOID)
     fatald("Token with no precedence in op_precedence", tokentype);
 
@@ -160,24 +160,24 @@ static struct ASTnode *postfix(void) {
     scan(&Token);
     return mkastleaf(A_INTLIT, P_INT, NULL, enumptr->posn);
   }
-  
+
   // In order to know if this is a variable, a function
-  // call or an array index so  we need to look at 
+  // call or an array index so  we need to look at
   // the subsequent token
   scan(&Token);
- 
+
   if (Token.token == T_LPAREN)
     return funccall();
- 
+
   if (Token.token == T_LBRACKET) {
     return array_access();
   }
-  
+
   if (Token.token == T_DOT)
     return member_access(0);
   if (Token.token == T_ARROW)
     return member_access(1);
- 
+
   // We assume that we have found a variable,
   // so we check for its existence
   if ((varptr = findsymbol(Text)) == NULL || varptr->stype != S_VARIABLE)
@@ -230,7 +230,7 @@ static struct ASTnode *primary(void) {
     default:
       fatals("Syntax error, token", Token.tokstr);
   }
-  
+
   scan(&Token);
   return n;
 }
@@ -279,7 +279,7 @@ struct ASTnode *prefix(void) {
       tree = prefix();
       tree->rvalue = 1;
       tree = mkastunary(A_LOGNOT, tree->type, tree, NULL, 0);
-      break;    
+      break;
     case T_INC:
       scan(&Token);
       tree = prefix();
@@ -313,7 +313,7 @@ struct ASTnode *binexpr(int ptp) {
   int ASTop;
   int tokentype;
 
-  // Build the left node using a prefix 
+  // Build the left node using a prefix
   left = prefix();
 
   tokentype = Token.token;

@@ -114,8 +114,8 @@ void cgpreamble() {
 	  "no:\n"
 	  "        loop    next\n"
 	  "        lodsq\n"
-	  "        popq    %%rsi\n" 
-    "        jmp     *%%rax\n" 
+	  "        popq    %%rsi\n"
+    "        jmp     *%%rax\n"
     "\n");
 }
 
@@ -150,7 +150,7 @@ void cgfuncpreamble(struct symtable *sym) {
     }
   }
 
-  // For locals, we shall create a new 
+  // For locals, we shall create a new
   // stack position.
   for (locvar = Loclhead; locvar != NULL; locvar = locvar->next) {
     locvar->posn = newlocaloffset(locvar->type);
@@ -158,7 +158,7 @@ void cgfuncpreamble(struct symtable *sym) {
 
   // Align stack pointer to be a multiple of 16
   stackOffset = (localOffset + 15) & ~15;
-  // Decrement stack pointer based on how many 
+  // Decrement stack pointer based on how many
   // variables we loaded onto the stack
   fprintf(Outfile, "\taddq\t$%d, %%rsp\n", -stackOffset);
 }
@@ -339,15 +339,24 @@ int cgstorglob(int r, struct symtable *sym) {
 }
 
 void cgglobsym(struct symtable *node) {
-  int size;
+  int size, type;
+  int initvalue;
+  int i;
 
   if (node == NULL)
     return;
   if (node->stype == S_FUNCTION)
     return;
 
-  size = typesize(node->type, node->ctype);
-   
+  if (node->stype == S_ARRAY) {
+    // Since arrays are pointers
+    type = value_at(node->type);
+    size = typesize(type, node->ctype);
+  } else {
+    size = node->size;
+    type = node->type;
+  }
+
   // .data
   // .globl varname
   // varname:   .long   0
@@ -357,17 +366,27 @@ void cgglobsym(struct symtable *node) {
   fprintf(Outfile, "\t.globl\t%s\n", node->name);
   fprintf(Outfile, "%s:", node->name);
 
-  for (int i = 0; i < node->size; i++) {
+  for (i = 0; i < node->nelems; i++) {
+    initvalue = 0;
+    if (node->initlist != NULL)
+      initvalue = node->initlist[i];
+
      switch (size) {
-       case 1: fprintf(Outfile, "\t.byte\t0\n"); break; 
-       case 4: fprintf(Outfile, "\t.long\t0\n"); break; 
-       case 8: fprintf(Outfile, "\t.quad\t0\n"); break; 
+       case 1: fprintf(Outfile, "\t.byte\t%d\n", initvalue); break;
+       case 4: fprintf(Outfile, "\t.long\t%d\n", initvalue); break;
+       case 8:
+          // Generate ptr to string literal
+          if (node->initlist != NULL && type == pointer_to(P_CHAR))
+            fprintf(Outfile, "\t.quad\tL%d\n", initvalue);
+          else
+            fprintf(Outfile, "\t.quad\t%d\n", initvalue);
+          break;
        default:
-          for (int i = 0; i < size; i++) {
+          for (int j = 0; j < size; j++) {
             fprintf(Outfile, "\t.byte\t0\n");
           }
-     } 
- }                                                                    
+     }
+ }
 }
 
 int cgcompare_and_set(int ASTop, int r1, int r2) {
@@ -403,7 +422,7 @@ void cgjump(int l) {
 int cgcompare_and_jump(int ASTop, int r1, int r2, int label) {
    if (ASTop < A_EQ || ASTop > A_GE)
     fatal("Bad ASTop in cgcompare_and_jump()");
-  
+
    // cmpq %r2, %r1
    fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
    // jne L1
@@ -422,7 +441,7 @@ int cgwiden(int r, int oldtype, int newtype) {
 int cgprimsize(int type) {
   if (ptrtype(type))
     return 8;
- 
+
   switch (type) {
     case P_CHAR: return 1;
     case P_INT: return 4;
@@ -481,7 +500,7 @@ int cgaddress(struct symtable *sym) {
   else
     // leaq varname(%rip), %r10
     fprintf(Outfile, "\tleaq\t%s(%%rip), %s\n", sym->name, reglist[r]);
-  
+
   return r;
 }
 
@@ -537,7 +556,7 @@ int cgstorderef(int r1, int r2, int type) {
 void cgglobstr(int l, char *strvalue) {
   char *cptr;
   cglabel(l);
-  
+
   // Loop ends when we hit \0
   for (cptr = strvalue; *cptr; cptr++) {
     fprintf(Outfile, "\t.byte\t%d\n", *cptr);
@@ -569,7 +588,7 @@ int cgor(int r1, int r2) {
 int cgxor(int r1, int r2) {
   // xorq %r9, %r10
   fprintf(Outfile, "\txorq\t%s, %s\n", reglist[r1], reglist[r2]);
-  free_register(r1); 
+  free_register(r1);
   return r2;
 }
 
@@ -583,7 +602,7 @@ int cgnegate(int r) {
 // Invert a register's value
 int cginvert(int r) {
   // notq %r10
-  fprintf(Outfile, "\tnotq\t%s\n", reglist[r]); 
+  fprintf(Outfile, "\tnotq\t%s\n", reglist[r]);
   return r;
 }
 
@@ -607,7 +626,7 @@ int cgshr(int r1, int r2) {
 
 int cglognot(int r) {
   // AND the register with itself to set the zero
-  // flag 
+  // flag
   //    test %r9, %r9
   //
   // Set register to 1 if the zero flag is set
@@ -662,7 +681,7 @@ int cgloadlocal(struct symtable *sym, int op) {
 	      fprintf(Outfile, "\tincl\t%d(%%rbp)\n", sym->posn);
       if (op == A_PREDEC)
 	      fprintf(Outfile, "\tdecl\t%d(%%rbp)\n", sym->posn);
-     
+
       fprintf(Outfile, "\tmovslq\t%d(%%rbp), %s\n", sym->posn, reglist[r]);
 
       if (op == A_POSTINC)
@@ -686,7 +705,7 @@ int cgloadlocal(struct symtable *sym, int op) {
     default:
       fatald("Bad type in cgloadlocal:", sym->type);
   }
-  return r;  
+  return r;
 }
 
 int cgstorlocal(int r, struct symtable *sym) {
@@ -717,7 +736,7 @@ void cgcopyarg(int r, int argposn) {
     fprintf(Outfile, "\tpushq\t%s\n", reglist[r]);
   } else {
     // +1 because argposn is 1-based
-    // movq %r10, %rdi 
+    // movq %r10, %rdi
     fprintf(Outfile, "\tmovq\t%s, %s\n", reglist[r], reglist[FIRSTPARAMREG - argposn + 1]);
   }
 }
@@ -759,7 +778,7 @@ void cgswitch(int reg, int casecount, int toplabel,
     casecount = 1;
   }
 
-  // Set up jump table 
+  // Set up jump table
   // L14:                                  # Switch jump table
   //       .quad   3                       # Three case values
   //       .quad   1, L10                  # case 1: jump to L10

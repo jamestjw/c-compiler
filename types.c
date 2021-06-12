@@ -43,7 +43,7 @@ int type_compatible(int *left, int *right, int onlyright) {
 }
 
 int pointer_to(int type) {
-  // Check if this will exceed the max level 
+  // Check if this will exceed the max level
   // of indirection
   if ((type & 0xf) == 0xf)
     fatald("Unrecognised in pointer_to: type", type);
@@ -61,7 +61,8 @@ int value_at(int type) {
 
 int inttype(int type) {
   // Check that this is not a pointer
-  return ((type & 0xf) == 0);
+  // and it is indeed an int type
+  return (((type & 0xf) == 0) && (type >= P_CHAR && type <= P_LONG));
 }
 
 // Return true if the type is of a pointer type
@@ -72,8 +73,8 @@ int ptrtype(int type) {
 
 // Given an AST tree and a type that we wish for it to become,
 // the function attempts to modify the tree by widening or scaling
-// to make it compatible with the given type. This function either 
-// returns the original tree if no changes were necessary, a 
+// to make it compatible with the given type. This function either
+// returns the original tree if no changes were necessary, a
 // modified tree or NULL (if the tree is not compatible with the given
 // type).
 //

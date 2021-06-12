@@ -45,7 +45,7 @@ void comma(void) {
 }
 
 void fatal(char *s) {
-  fprintf(stderr, "%s on line %d of %s\n", s, Line, Infilename); 
+  fprintf(stderr, "%s on line %d of %s\n", s, Line, Infilename);
   fclose(Outfile);
   unlink(Outfilename);
   exit(1);

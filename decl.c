@@ -42,7 +42,7 @@ static struct symtable *composite_declaration(int type) {
   if (Token.token != T_LBRACE) {
     if (ctype == NULL)
       // Using an undefined struct
-      fatals("Unknown struct/union type", Text); 
+      fatals("Unknown struct/union type", Text);
 
     return ctype;
   }
@@ -54,9 +54,9 @@ static struct symtable *composite_declaration(int type) {
 
   // Build the composite and skip the left brace
   if (type == P_STRUCT)
-    ctype = addstruct(Text, P_STRUCT, NULL, 0, 0);
+    ctype = addstruct(Text);
   else
-    ctype = addunion(Text, P_UNION, NULL, 0, 0); 
+    ctype = addunion(Text);
   scan(&Token);
 
   while (1) {
@@ -163,7 +163,7 @@ static void enum_declaration(void) {
   }
 
   // Consume RBRACE
-  scan(&Token); 
+  scan(&Token);
 }
 
 // Parse a typedef definition and return the type
@@ -185,9 +185,9 @@ static int typedef_declaration(struct symtable **ctype) {
 
   type = parse_stars(type);
 
-  addtypedef(Text, type, *ctype, 0, 0);
+  addtypedef(Text, type, *ctype);
   // Consume the new type name identifier
-  scan(&Token); 
+  scan(&Token);
 
   return type;
 }
@@ -203,7 +203,7 @@ static int type_of_typedef(char *name, struct symtable **ctype) {
   return t->type;
 }
 
-// Parse the current token and 
+// Parse the current token and
 // return a primitive type enum value
 int parse_type(struct symtable **ctype, int *class) {
   int type, exstatic = 1;
@@ -211,7 +211,7 @@ int parse_type(struct symtable **ctype, int *class) {
   // See if the class has been changed to extern (later, static)
   while (exstatic) {
     switch (Token.token) {
-      case T_EXTERN: 
+      case T_EXTERN:
         *class = C_EXTERN;
         scan(&Token);
         break;
@@ -221,19 +221,19 @@ int parse_type(struct symtable **ctype, int *class) {
   }
 
   switch (Token.token) {
-    case T_VOID: 
+    case T_VOID:
       type = P_VOID;
       scan(&Token);
       break;
-    case T_CHAR: 
+    case T_CHAR:
       type = P_CHAR;
       scan(&Token);
       break;
-    case T_INT:  
+    case T_INT:
       type = P_INT;
       scan(&Token);
       break;
-    case T_LONG: 
+    case T_LONG:
       type = P_LONG;
       scan(&Token);
       break;
@@ -295,65 +295,6 @@ static int parse_stars(int type) {
   return type;
 }
 
-// Parse the declaration of a list of
-// variables. The identifier should have
-// been scanned prior to calling this function.
-struct symtable *var_declaration(int type, struct symtable *ctype, int class) {
-  struct symtable *sym = NULL;
-
-  switch (class) {
-    case C_EXTERN:
-    case C_GLOBAL:
-      if (findglob(Text) != NULL)
-        fatals("Duplicate global variable declaration", Text);
-    case C_LOCAL:
-    case C_PARAM:
-      if (findlocl(Text) != NULL)
-        fatals("Duplicate local variable declaration", Text);
-  }
-
-  if (Token.token == T_LBRACKET) {
-    // Consume the '[' 
-    scan(&Token);
-
-    // Check for array size
-    // TODO: Must provide size for now
-    if (Token.token == T_INTLIT) {
-      switch (class) {
-        case C_EXTERN:
-        case C_GLOBAL:
-          sym = addglob(Text, pointer_to(type), ctype, S_ARRAY, class, Token.intvalue);
-          break;
-        case C_LOCAL:
-        case C_PARAM:
-        case C_MEMBER:
-          fatal("TODO: Implement support for local arrays");
-      }
-    }
-    // Consume int literal
-    scan(&Token);
-    match(T_RBRACKET, "]");
-  } else {
-    switch (class) {
-      case C_EXTERN:
-      case C_GLOBAL:
-        sym = addglob(Text, type, ctype, S_VARIABLE, class, 1);
-        break;
-      case C_LOCAL:
-        sym = addlocl(Text, type, ctype, S_VARIABLE, 1);
-        break;
-      case C_PARAM:
-        sym = addparm(Text, type, ctype, S_VARIABLE, 1);
-        break;
-      case C_MEMBER:
-        sym = addmemb(Text, type, ctype, S_VARIABLE, 1);
-        break;
-    }
-  }
-
-  return sym;
-}
-
 // The identifier should already have been consumed
 // prior to calling this function.
 static struct symtable *function_declaration(char *funcname, int type,
@@ -371,7 +312,7 @@ static struct symtable *function_declaration(char *funcname, int type,
   // for the end label and add the fucntion to the symbol table
   if (oldfuncsym == NULL) {
     endlabel = genlabel();
-    newfuncsym = addglob(funcname, type, NULL, S_FUNCTION, C_GLOBAL, endlabel);
+    newfuncsym = addglob(funcname, type, NULL, S_FUNCTION, C_GLOBAL, 0, endlabel);
   }
 
   lparen();
@@ -435,50 +376,156 @@ static struct symtable *function_declaration(char *funcname, int type,
 static struct symtable *array_declaration(char *varname, int type,
     struct symtable *ctype, int class) {
   struct symtable *sym = NULL;
+  int nelems = -1;    // Assume number of elements is not given
+  int maxelems;       // Max number of elems in the init list
+  int *initlist;      // List of initial elements
+  int i = 0, j;
+
   // Skip past '['
   scan(&Token);
 
-  // Check for array size
   if (Token.token == T_INTLIT) {
-    switch(class) {
-      case C_EXTERN:
-      case C_GLOBAL:
-        sym = addglob(varname, pointer_to(type), ctype, S_ARRAY, class, Token.intvalue);
-        break;
-      case C_LOCAL:
-      case C_PARAM:
-      case C_MEMBER:
-        fatal("For now, declaration of non-global arrays is not supported");
-    }
+    if (Token.intvalue <= 0)
+      fatald("Array size is illegal", Token.intvalue);
+    nelems = Token.intvalue;
+    scan(&Token);
   }
 
-  // Ensure we have a following ']'
-  scan(&Token);
   match(T_RBRACKET, "]");
+
+  switch(class) {
+    case C_EXTERN:
+    case C_GLOBAL:
+      sym = addglob(varname, pointer_to(type), ctype, S_ARRAY, class, 0, 0);
+      break;
+    case C_LOCAL:
+    case C_PARAM:
+    case C_MEMBER:
+      fatal("For now, declaration of non-global arrays is not supported");
+  }
+
+  if (Token.token == T_ASSIGN) {
+    if (class != C_GLOBAL)
+      fatals("Variable can not be initialised", varname);
+    scan(&Token);
+
+    match(T_LBRACE, "{");
+
+#define TABLE_INCREMENT 10
+
+    // If the array already has nelems, allocate that many elements
+    // Otherwise, start with TABLE_INCREMENT
+    if (nelems != -1)
+      maxelems = nelems;
+    else
+      maxelems = TABLE_INCREMENT;
+
+    initlist = (int *) malloc(maxelems * sizeof(int));
+
+    // Loop getting new literal value and adding to initlist
+    while (1) {
+      // If the number of elems in the list exceeds the
+      // size that was specified before, raise an error
+      if (nelems != -1 && i == maxelems)
+        fatal("Too many values in initialisation list");
+      initlist[i++] = parse_literal(type);
+      scan(&Token);
+
+      // If original size was not specified, we increase
+      // the list size
+      if (nelems == -1 && i == maxelems) {
+        maxelems += TABLE_INCREMENT;
+        initlist = (int *) realloc(initlist, maxelems * sizeof(int));
+      }
+
+      if (Token.token == T_RBRACE) {
+        scan(&Token);
+        break;
+      }
+
+      comma();
+    }
+
+    for (j = i; j < maxelems; j++)
+      initlist[j] = 0;
+    if (i > nelems)
+      nelems = i;
+    sym->initlist = initlist;
+  }
+
+  sym->nelems = nelems;
+  sym->size = sym->nelems * typesize(type, ctype);
+  if (class == C_GLOBAL)
+    genglobsym(sym);
 
   return sym;
 }
 
 static struct symtable *scalar_declaration(char *varname, int type,
     struct symtable *ctype, int class) {
+  struct symtable *sym = NULL;
+
   switch (class) {
     case C_EXTERN:
     case C_GLOBAL:
-      return addglob(varname, type, ctype, S_VARIABLE, class, 1);
+      sym = addglob(varname, type, ctype, S_VARIABLE, class, 1, 0);
+      break;
     case C_LOCAL:
-      return addlocl(varname, type, ctype, S_VARIABLE, 1);
+      sym = addlocl(varname, type, ctype, S_VARIABLE, 1);
+      break;
     case C_PARAM:
-      return addparm(varname, type, ctype, S_VARIABLE, 1);
+      sym = addparm(varname, type, ctype, S_VARIABLE);
+      break;
     case C_MEMBER:
-      return addmemb(varname, type, ctype, S_VARIABLE, 1);
+      sym = addmemb(varname, type, ctype, S_VARIABLE, 1);
+      break;
   }
 
-  return NULL;
+  if (Token.token == T_ASSIGN) {
+    // Our compiler only allows this for global and local vars
+    if (class != C_GLOBAL && class != C_LOCAL)
+      fatals("Variable can not be initialised", varname);
+    scan(&Token);
+
+    if (class == C_GLOBAL) {
+      sym->initlist = (int *) malloc(sizeof(int));
+      sym->initlist[0] = parse_literal(type);
+      // Consume the literal
+      scan(&Token);
+    }
+  }
+
+  if (class == C_GLOBAL)
+    genglobsym(sym);
+
+  return sym;
 }
 
-static void array_initialisation(struct symtable *sym, int type,
-    struct symtable *ctype, int class) {
-  fatal("No array initialisation yet");
+// Given a type, check that the current token is a literal of
+// that type. If it's an integer literal, return this value. If
+// it's a string literal, return the label number of the string.
+// It does not consume the current token.
+int parse_literal(int type) {
+  if ((type == pointer_to(P_CHAR)) && (Token.token == T_STRLIT)) {
+    return genglobstr(Text);
+  }
+
+  if (Token.token == T_INTLIT) {
+    switch (type) {
+      case P_CHAR:
+        if (Token.intvalue < 0 || Token.intvalue > 255)
+          fatal("Integer literal value too big for char type");
+      case P_INT:
+      case P_LONG:
+        break;
+      default:
+        fatal("Type mismatch: integer literal vs. variable");
+    }
+  } else {
+    fatal("Expecting an integer literal value");
+  }
+
+  return Token.intvalue;
 }
 
 static struct symtable *symbol_declaration(int type, struct symtable *ctype, int class) {
@@ -486,7 +533,6 @@ static struct symtable *symbol_declaration(int type, struct symtable *ctype, int
   // We might scan in more identifiers for assignment expressions,
   // hence we copy the name just in case.
   char *varname = strdup(Text);
-  int stype = S_VARIABLE;
 
   // Assume that it will be a scalar variable
   ident();
@@ -511,24 +557,8 @@ static struct symtable *symbol_declaration(int type, struct symtable *ctype, int
 
   if (Token.token == T_LBRACKET) {
     sym = array_declaration(varname, type, ctype, class);
-    stype = S_ARRAY;
   } else {
     sym = scalar_declaration(varname, type, ctype, class);
-  }
-
-  if (Token.token == T_ASSIGN) {
-    if (class == C_PARAM)
-      fatals("Initialisation of a parameter not permitted", varname);
-    if (class == C_MEMBER)
-      fatals("Initialisation of a member not permitted", varname);
-    scan(&Token);
-
-    if (stype == S_ARRAY)
-      array_initialisation(sym, type, ctype, class);
-    else {
-      fatal("Scalar variable initialisation not done yet");
-      // Var initialisation
-    }
   }
 
   return sym;

@@ -10,7 +10,7 @@
 
 #define AOUT "a.out"
 #define ASCMD "as -o"
-#define LDCMD "cc -o" 
+#define LDCMD "cc -o"
 #define CPPCMD "cpp -nostdinc -isystem"
 
 struct token {
@@ -84,22 +84,21 @@ struct ASTnode {
 struct symtable {
   char *name;              // Name of a symbol
   int type;                // Primitive type of the symbol
-  struct symtable *ctype;  // Pointer to the composite type if type == P_STRUCT 
+  struct symtable *ctype;  // Pointer to the composite type if type == P_STRUCT
   int stype;               // Structural type of the symbol
   int class;               // Storage class for the symbol
                            // i.e. C_GLOBAL, C_LOCAL or C_PARAM
+                           //
+  int size;                // Number of elements in the symbol
+  int nelems;              // For functions, # of params
+                           // For structs, # of fields
+                           // For arrays, # of elements
   union {
-    int size;              // Number of elements in the symbol
     int endlabel;          // End label for S_FUNCTIONs
-    int intvalue;          // For enum symbols, the associated int value
-  };
-  union {
     int posn;              // Negative offset from the stack BP
                            // for locals
-    int nelems;            // For functions, # of params
-                           // For structs, # of fields
   };
-
+  int *initlist;           // List of initial values
   struct symtable *next;   // Next symbol on the list
   struct symtable *member; // First member of a function, struct, union or enum
 };

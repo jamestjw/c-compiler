@@ -49,7 +49,7 @@ static int next(void) {
     if (Token.token != T_INTLIT)
       fatals("Expecting pre-processor line number, got", Text);
     l = Token.intvalue;
-    
+
     scan(&Token);
     // The file from which the following line is from
     if (Token.token != T_STRLIT)
@@ -88,11 +88,11 @@ static int skip(void) {
   int c;
 
   c = next();
-  
+
   while (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' ) {
     c = next();
   }
-  
+
   return c;
 }
 
@@ -107,7 +107,7 @@ static int chrpos(char *s, int c) {
 static int scanint(int c) {
   int k, val = 0;
 
-  // We use chrpos instead of substracting the ASCII value of 
+  // We use chrpos instead of substracting the ASCII value of
   // '0' from c so that we maintain the possibility of using this
   // with hexadecimals in the future.
   while ((k = chrpos("0123456789", c)) >= 0) {
@@ -232,9 +232,9 @@ static int keyword(char *s) {
 // or string literal
 static int scanch(void) {
   int c;
-  
+
   c = next();
-  
+
   // Handle escape sequences
   if (c == '\\') {
     switch (c = next()) {
@@ -274,7 +274,7 @@ static int scanstr(char *buf) {
 void reject_token(struct token *t) {
   if (Rejtoken != NULL)
     fatal("Can't reject token twice");
-  Rejtoken = t;  
+  Rejtoken = t;
 }
 
 int scan(struct token *t) {
@@ -286,7 +286,7 @@ int scan(struct token *t) {
     Rejtoken = NULL;
     return 1;
   }
-  
+
   // Skip whitespace
   c = skip();
 
@@ -312,7 +312,7 @@ int scan(struct token *t) {
 	      putback(c);
 	      t->token = T_MINUS;
       }
-      break;    
+      break;
     case '*':
       t->token = T_STAR;
       break;

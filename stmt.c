@@ -29,7 +29,7 @@ struct ASTnode *if_statement(void) {
   // AST for the compound statement for the TRUE clause
   trueAST = single_statement();
 
-  // Check for the presence of an 'else' token and 
+  // Check for the presence of an 'else' token and
   // parse the statement for the FALSE clause
   if (Token.token == T_ELSE) {
     scan(&Token);
@@ -115,7 +115,7 @@ static struct ASTnode *return_statement(void) {
   if (tree == NULL) fatal("Incompatible return type");
 
   tree = mkastunary(A_RETURN, P_NONE, tree, NULL, 0);
-  
+
   rparen();
   semi();
 
@@ -187,7 +187,7 @@ static struct ASTnode *switch_statement(void) {
             if (casevalue == c->intvalue)
               fatal("Duplicate case value");
         }
-        
+
         match(T_COLON, ":");
         left = compound_statement(1);
         casecount++;

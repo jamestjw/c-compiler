@@ -19,10 +19,10 @@ char *Infilename;
 char *Outfilename;
 
 int O_dumpAST;
-int O_keepasm;	
+int O_keepasm;
 int O_assemble;
-int O_dolink;	
-int O_verbose;	
+int O_dolink;
+int O_verbose;
 
 // String version of tokens to be used for debugging purposes.
 char *tokstr[] = { "+", "-", "*", "/", "intlit" };
@@ -119,7 +119,7 @@ static char *do_assemble(char *filename) {
     fprintf(stderr, "Error: %s has no suffix, try appending .s at the end of the filename\n", filename);
     exit(1);
   }
-  
+
   // Build the assembly command and execute it
   snprintf(cmd, TEXTLEN, "%s %s %s", ASCMD, outfilename, filename);
 
@@ -182,11 +182,11 @@ int main(int argc, char* argv[]) {
 
     for (int j = 1; (*argv[i] == '-') && argv[i][j]; j++) {
       switch(argv[i][j]) {
-        case 'o': 
+        case 'o':
           outfilename = argv[++i];
           break;
-        case 'T': 
-          O_dumpAST = 1; 
+        case 'T':
+          O_dumpAST = 1;
           break;
         case 'c':
           O_assemble = 1;
@@ -201,7 +201,7 @@ int main(int argc, char* argv[]) {
         case 'v':
           O_verbose = 1;
           break;
-        default: 
+        default:
           usage(argv[0]);
       }
     }
@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
       }
 
       // Add the object file's name to the list
-      objlist[objcount++] = objfile; 
+      objlist[objcount++] = objfile;
       objlist[objcount] = NULL;
     }
 
@@ -246,6 +246,6 @@ int main(int argc, char* argv[]) {
         unlink(objlist[i]);
     }
   }
- 
+
   return 0;
 }

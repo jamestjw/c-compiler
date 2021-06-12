@@ -9,7 +9,7 @@ int cgadd(int r1, int r2);
 int cgsub(int r1, int r2);
 int cgmul(int r1, int r2);
 int cgdiv(int r1, int r2);
-// Load a value from a global symbol. If the 
+// Load a value from a global symbol. If the
 // operation is a pre/post-increment, also
 // perform this action
 int cgloadglob(struct symtable *sym, int op);
@@ -30,7 +30,7 @@ int cgcompare_and_jump(int ASTop, int r1, int r2, int label);
 
 // Generates a jump to a given label
 void cgjump(int);
-// Generates a label, e.g. L1 
+// Generates a label, e.g. L1
 void cglabel(int l);
 
 // Widen the value in the register from the old
@@ -41,7 +41,7 @@ int cgwiden(int r, int oldtype, int newtype);
 // Return the size of a primitive type
 int cgprimsize(int type);
 // Call a function with one argument from the
-// given register and return a register with the 
+// given register and return a register with the
 // result of the function call
 int cgcall(struct symtable *sym, int numargs);
 // Return from a function call while returning a
