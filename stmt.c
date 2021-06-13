@@ -240,9 +240,9 @@ static struct ASTnode *single_statement(void) {
     case T_UNION:
     case T_ENUM:
     case T_TYPEDEF:
-      declaration_list(&ctype, C_LOCAL, T_SEMI, T_EOF);
+      declaration_list(&ctype, C_LOCAL, T_SEMI, T_EOF, &stmt);
       semi();
-      return NULL; // No AST here
+      return stmt; // Assignment statements to locals
     case T_IF:
       return if_statement();
     case T_WHILE:
