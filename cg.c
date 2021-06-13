@@ -376,7 +376,7 @@ void cgglobsym(struct symtable *node) {
        case 4: fprintf(Outfile, "\t.long\t%d\n", initvalue); break;
        case 8:
           // Generate ptr to string literal
-          if (node->initlist != NULL && type == pointer_to(P_CHAR))
+          if (node->initlist != NULL && type == pointer_to(P_CHAR) && initvalue != 0)
             fprintf(Outfile, "\t.quad\tL%d\n", initvalue);
           else
             fprintf(Outfile, "\t.quad\t%d\n", initvalue);

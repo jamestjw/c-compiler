@@ -317,6 +317,8 @@ int genAST(struct ASTnode *n, int iflabel,
     case A_CONTINUE:
       cgjump(looptoplabel);
       return NOREG;
+    case A_CAST:
+      return leftreg; // Not much to do
     default:
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);

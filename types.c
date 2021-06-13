@@ -2,6 +2,7 @@
 #include "gen.h"
 #include "misc.h"
 #include "tree.h"
+#include "types.h"
 
 // Given two primitive types, return true if they are compatible.
 // Sets *left and *right to either 0 or A_WIDEN depending on whether
@@ -86,14 +87,19 @@ struct ASTnode *modify_type(struct ASTnode *tree, int rtype, int op) {
 
   ltype = tree->type;
 
+  if (ltype == P_STRUCT || ltype == P_UNION)
+    fatal("Don't know how to do this yet");
+  if (rtype == P_STRUCT || rtype == P_UNION)
+    fatal("Don't know how to do this yet");
+
   // Handle integer types
   if (inttype(ltype) && inttype(rtype)) {
     // Check if types already match
     if (ltype == rtype) return tree;
 
     // Get the sizes of each type
-    lsize = genprimsize(ltype);
-    rsize = genprimsize(rtype);
+    lsize = typesize(ltype, NULL);
+    rsize = typesize(rtype, NULL);
 
     // Check if tree's size is too big
     if (lsize > rsize) return NULL;
@@ -102,11 +108,14 @@ struct ASTnode *modify_type(struct ASTnode *tree, int rtype, int op) {
     if (rsize > lsize) return mkastunary(A_WIDEN, rtype, tree, NULL, 0);
   }
 
-  // For pointers on the left
-  if (ptrtype(ltype)) {
-    // If it matches the rtype and we are not doing
-    // a binary OP, we do not have to make any changes.
-    if (op == 0 && ltype == rtype)
+  // For pointers
+  if (ptrtype(ltype) && ptrtype(rtype)) {
+    if (op >= A_EQ && op <= A_GE)
+      return tree;
+
+    // Comparison of the same type for non-binary operations is fine (
+    // like assignments), or when the left type is of 'void *' type
+    if (op == 0 && (ltype == rtype || ltype == pointer_to(P_VOID)))
       return tree;
   }
 

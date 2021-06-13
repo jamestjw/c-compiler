@@ -1,4 +1,5 @@
 #include "data.h"
+#include "decl.h"
 #include "expr.h"
 #include "gen.h"
 #include "misc.h"
@@ -201,7 +202,7 @@ static struct ASTnode *postfix(void) {
 // Parse a primary factor and return a node representing it
 static struct ASTnode *primary(void) {
   struct ASTnode *n = NULL;
-  int id;
+  int id, type = 0;
 
   switch (Token.token) {
     case T_INTLIT:
@@ -221,11 +222,33 @@ static struct ASTnode *primary(void) {
     case T_LPAREN:
       // Consume the '('
       scan(&Token);
-      // Parse the expression
-      n = binexpr(0);
-      // Match a ')'
-      rparen();
 
+      switch (Token.token) {
+        case T_IDENT:
+          if (findtypedef(Text) == NULL) {
+            n = binexpr(0);
+            break;
+          }
+        case T_VOID:
+        case T_CHAR:
+        case T_INT:
+        case T_LONG:
+        case T_STRUCT:
+        case T_UNION:
+        case T_ENUM:
+          // Get the type inside the parentheses
+          type = parse_cast();
+          rparen();
+        default:
+          n = binexpr(0);
+      }
+
+      if (type == 0)
+        rparen();
+      else
+        // If type != 0, a typecast is involved so
+        // we build the relevant node
+        n = mkastunary(A_CAST, type, n, NULL, 0);
       return n;
     default:
       fatals("Syntax error, token", Token.tokstr);

@@ -297,6 +297,20 @@ static int parse_stars(int type) {
   return type;
 }
 
+// Parsing of '(' and ')' should be done
+// by the caller of this function
+int parse_cast(void) {
+  int type, class;
+  struct symtable *ctype;
+
+  type = parse_stars(parse_type(&ctype, &class));
+
+  if (type == P_STRUCT || type == P_UNION || type == P_VOID)
+    fatal("Cannot cast to a struct, union or void type");
+
+  return type;
+}
+
 // The identifier should already have been consumed
 // prior to calling this function.
 static struct symtable *function_declaration(char *funcname, int type,
@@ -382,6 +396,7 @@ static struct symtable *array_declaration(char *varname, int type,
   int maxelems;       // Max number of elems in the init list
   int *initlist;      // List of initial elements
   int i = 0, j;
+  int casttype, newtype;
 
   // Skip past '['
   scan(&Token);
@@ -426,11 +441,30 @@ static struct symtable *array_declaration(char *varname, int type,
 
     // Loop getting new literal value and adding to initlist
     while (1) {
+      // Get original type
+      newtype = type;
+
       // If the number of elems in the list exceeds the
       // size that was specified before, raise an error
       if (nelems != -1 && i == maxelems)
         fatal("Too many values in initialisation list");
-      initlist[i++] = parse_literal(type);
+
+      if (Token.token == T_LPAREN) {
+        scan(&Token);
+        casttype = parse_cast();
+        rparen();
+
+        // Check that the two types are compatible, change the newtype so
+        // that parse_literal works since a void * can be assigned to any
+        // ptr type
+        if (casttype == type || (casttype == pointer_to(P_VOID) && ptrtype(type)))
+          newtype = P_NONE;
+        else
+          fatal("Type mismatch");
+        newtype = P_NONE;
+      }
+
+      initlist[i++] = parse_literal(newtype);
       scan(&Token);
 
       // If original size was not specified, we increase
@@ -467,6 +501,7 @@ static struct symtable *scalar_declaration(char *varname, int type,
     struct symtable *ctype, int class, struct ASTnode **tree) {
   struct symtable *sym = NULL;
   struct ASTnode *varnode, *exprnode;
+  int casttype;
   *tree = NULL;
 
   switch (class) {
@@ -492,6 +527,20 @@ static struct symtable *scalar_declaration(char *varname, int type,
     scan(&Token);
 
     if (class == C_GLOBAL) {
+      if (Token.token == T_LPAREN) {
+        scan(&Token);
+        casttype = parse_cast();
+        rparen();
+
+        // A 'void *' cast type can be assigned to any ptr type
+        if (casttype == type || (casttype == pointer_to(P_VOID) && ptrtype(type)))
+          // Relax parse type restrictions when we pass this to parse_literal
+          // We can do this since either the cast type matches the var type
+          // or we have a void*
+          type = P_NONE;
+        else
+          fatal("Type mismatch");
+      }
       sym->initlist = (int *) malloc(sizeof(int));
       sym->initlist[0] = parse_literal(type);
       // Consume the literal
@@ -519,10 +568,12 @@ static struct symtable *scalar_declaration(char *varname, int type,
 // Given a type, check that the current token is a literal of
 // that type. If it's an integer literal, return this value. If
 // it's a string literal, return the label number of the string.
-// It does not consume the current token.
+// It does not consume the current token. Relax parsing restrictions
+// if type is P_NONE.
 int parse_literal(int type) {
-  if ((type == pointer_to(P_CHAR)) && (Token.token == T_STRLIT)) {
-    return genglobstr(Text);
+  if (Token.token == T_STRLIT) {
+    if (type == pointer_to(P_CHAR) || type == P_NONE)
+      return genglobstr(Text);
   }
 
   if (Token.token == T_INTLIT) {
@@ -530,6 +581,7 @@ int parse_literal(int type) {
       case P_CHAR:
         if (Token.intvalue < 0 || Token.intvalue > 255)
           fatal("Integer literal value too big for char type");
+      case P_NONE:
       case P_INT:
       case P_LONG:
         break;
