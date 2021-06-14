@@ -5,8 +5,6 @@
 
 #define TEXTLEN 512
 #define NSYMBOLS 1024   // Num of entries in the symbol table
-#define NOREG -1        // When AST generation functions have no registers to return
-#define NOLABEL 0       // When we have no label to pass to genAST()
 
 #define AOUT "a.out"
 #define ASCMD "as -o"
@@ -24,7 +22,9 @@ enum {
   T_EOF,
 
   // Binary operators
-  T_ASSIGN, T_LOGOR, T_LOGAND,
+  T_ASSIGN, T_ASPLUS, T_ASMINUS,
+  T_ASSTAR, T_ASSLASH,
+  T_LOGOR, T_LOGAND,
   T_OR, T_XOR, T_AMPER,
   T_EQ, T_NE,
   T_LT, T_GT, T_LE, T_GE,
@@ -53,7 +53,8 @@ enum {
 // AST node types
 // Binary operators line up exactly with token types
 enum {
-  A_ASSIGN=1, A_LOGOR, A_LOGAND, A_OR, A_XOR, A_AND,
+  A_ASSIGN=1, A_ASPLUS, A_ASMINUS, A_ASSTAR, A_ASSLASH,
+  A_LOGOR, A_LOGAND, A_OR, A_XOR, A_AND,
   A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE, A_LSHIFT, A_RSHIFT,
   A_ADD, A_SUBTRACT, A_MULTIPLY, A_DIVIDE,
   A_INTLIT, A_STRLIT, A_IDENT, A_GLUE,
@@ -73,34 +74,29 @@ struct ASTnode {
   struct ASTnode *mid;
   struct ASTnode *right;
   struct symtable *sym;     // The pointer to the symbol in the symtable
-  union {
-    int intvalue;           // Integer value for A_INTLIT
-    int id;                 // Symbol slot number for A_IDENT
-    int size;               // Size to scale by for A_SCALE
-  };
+#define a_intvalue a_size	  // For A_INTLIT, the integer value
+  int a_size;			          // For A_SCALE, the size to scale by
 };
 
 // Symbol table entry
 struct symtable {
-  char *name;              // Name of a symbol
-  int type;                // Primitive type of the symbol
-  struct symtable *ctype;  // Pointer to the composite type if type == P_STRUCT
-  int stype;               // Structural type of the symbol
-  int class;               // Storage class for the symbol
-                           // i.e. C_GLOBAL, C_LOCAL or C_PARAM
-                           //
-  int size;                // Number of elements in the symbol
-  int nelems;              // For functions, # of params
-                           // For structs, # of fields
-                           // For arrays, # of elements
-  union {
-    int endlabel;          // End label for S_FUNCTIONs
-    int posn;              // Negative offset from the stack BP
-                           // for locals
-  };
-  int *initlist;           // List of initial values
-  struct symtable *next;   // Next symbol on the list
-  struct symtable *member; // First member of a function, struct, union or enum
+  char *name;                  // Name of a symbol
+  int type;                    // Primitive type of the symbol
+  struct symtable *ctype;      // Pointer to the composite type if type == P_STRUCT
+  int stype;                   // Structural type of the symbol
+  int class;                   // Storage class for the symbol
+                               // i.e. C_GLOBAL, C_LOCAL or C_PARAM
+                               //
+  int size;                    // Number of elements in the symbol
+  int nelems;                  // For functions, # of params
+                               // For structs, # of fields
+                               // For arrays, # of elements
+#define st_endlabel st_posn    // End label for S_FUNCTIONs
+  int st_posn;                 // Negative offset from the stack BP
+                               // for locals
+  int *initlist;               // List of initial values
+  struct symtable *next;       // Next symbol on the list
+  struct symtable *member;     // First member of a function, struct, union or enum
 };
 
 // Primitive types
@@ -130,3 +126,9 @@ enum {
   C_TYPEDEF,    // A named typedef
 };
 
+enum {
+  NOREG = -1,   // Use NOREG when AST generation functions
+                // have no registers to return
+  NOLABEL = 0,  // Use NOLABEL when we have no label to
+                // pass to genAST
+};

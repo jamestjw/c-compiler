@@ -82,21 +82,21 @@ static struct symtable *composite_declaration(int type) {
   Membhead = Membtail = NULL;
 
   m = ctype->member;
-  m->posn = 0;
+  m->st_posn = 0;
   offset = typesize(m->type, m->ctype);
 
   for (m = m->next; m != NULL; m = m->next) {
     if (type == P_STRUCT) {
       // Set the offset for the next member
-      m->posn = genalign(m->type, offset, 1);
+      m->st_posn = genalign(m->type, offset, 1);
 
       // Get the offset of the next free byte after this member
       // Is this right implementation??
-      offset = m->posn + typesize(m->type, m->ctype);
+      offset = m->st_posn + typesize(m->type, m->ctype);
       // Below is incorrect?
       // offset += typesize(m->type, m->ctype);
     } else {
-      m->posn = 0;
+      m->st_posn = 0;
       // Incorrect? Union size should be the size of largest member
       offset += typesize(m->type, m->ctype);
     }

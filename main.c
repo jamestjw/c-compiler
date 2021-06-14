@@ -24,9 +24,6 @@ int O_assemble;
 int O_dolink;
 int O_verbose;
 
-// String version of tokens to be used for debugging purposes.
-char *tokstr[] = { "+", "-", "*", "/", "intlit" };
-
 static void init() {
   Line = 1;
   Putback = '\n';

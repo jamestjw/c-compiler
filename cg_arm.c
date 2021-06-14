@@ -132,7 +132,7 @@ void cgfuncpreamble(char *name) {
 }
 
 void cgfuncpostamble(int id) {
-  cglabel(n->sym->endlabel);
+  cglabel(n->sym->st_endlabel);
   // sub sp, fp, #4
   // pop {fp, pc}
   // .align 2
@@ -383,7 +383,7 @@ void cgreturn(int reg, int id) {
   // Move return value to r0
   // mov r0, r4
   fprintf(Outfile, "\tmov\tr0, %s\n", reglist[reg]);
-  cgjump(n->sym->endlabel);
+  cgjump(n->sym->st_endlabel);
 }
 
 int cgaddress(int id) {

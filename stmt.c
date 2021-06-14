@@ -181,10 +181,10 @@ static struct ASTnode *switch_statement(void) {
           left = binexpr(0);
           if (left->op != A_INTLIT)
             fatal("Expecting integer literal for case value");
-          casevalue = left->intvalue;
+          casevalue = left->a_intvalue;
 
           for (c = casetree; c != NULL; c = c->right)
-            if (casevalue == c->intvalue)
+            if (casevalue == c->a_intvalue)
               fatal("Duplicate case value");
         }
 
@@ -209,7 +209,7 @@ static struct ASTnode *switch_statement(void) {
 
   Switchlevel--;
 
-  n->intvalue = casecount;
+  n->a_intvalue = casecount;
   n->right = casetree;
   rbrace();
 

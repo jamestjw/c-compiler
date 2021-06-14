@@ -14,7 +14,9 @@ struct token Token;
 // Operator precedence for each token
 // A bigger number indicates a higher precedence
 static int OpPrec[] = {
-  0, 10, 20, 30,		// T_EOF, T_ASSIGN, T_LOGOR, T_LOGAND
+  0, 10, 10,        // T_EOF, T_ASSIGN, T_ASPLUS,
+  10, 10, 10,       // T_ASMINUS, T_ASSTAR, T_ASSLASH,
+  20, 30,		        // T_LOGOR, T_LOGAND
   40, 50, 60,			  // T_OR, T_XOR, T_AMPER
   70, 70,			      // T_EQ, T_NE
   80, 80, 80, 80,		// T_LT, T_GT, T_LE, T_GE
@@ -27,7 +29,7 @@ static int OpPrec[] = {
 int binastop(int tokentype) {
   // For tokens in this range, there is a 1-1 mapping between
   // token type and node type
-  if (tokentype > T_EOF && tokentype < T_INTLIT)
+  if (tokentype > T_EOF && tokentype <= T_SLASH)
     return tokentype;
 
   fatald("Syntax error, token", tokentype);
@@ -57,7 +59,7 @@ static int op_precedence(int tokentype) {
 
 // Returns true if token is a right-associative operator
 static int rightassoc(int tokentype) {
-  if (tokentype == T_ASSIGN)
+  if (tokentype == T_ASSIGN && tokentype <= T_ASSLASH)
     return 1;
   return 0;
 }
@@ -141,7 +143,7 @@ static struct ASTnode *member_access(int withpointer) {
     fatals("Member not found in struct/union", Text);
 
   // Build a node with the offset of the member
-  right = mkastleaf(A_INTLIT, P_INT, NULL, m->posn);
+  right = mkastleaf(A_INTLIT, P_INT, NULL, m->st_posn);
 
   // Add the member's offset to the base of the struct and dereference it
   left = mkastnode(A_ADD, pointer_to(m->type), left, NULL, right, NULL, 0);
@@ -159,7 +161,7 @@ static struct ASTnode *postfix(void) {
   // to an INTLIT node
   if ((enumptr = findenumval(Text)) != NULL) {
     scan(&Token);
-    return mkastleaf(A_INTLIT, P_INT, NULL, enumptr->posn);
+    return mkastleaf(A_INTLIT, P_INT, NULL, enumptr->st_posn);
   }
 
   // In order to know if this is a variable, a function

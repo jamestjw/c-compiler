@@ -12,7 +12,8 @@ static struct token *Rejtoken = NULL;
 
 // List of token strings, for debugging purposes
 char *Tstring[] = {
-  "EOF", "=", "||", "&&", "|", "^", "&",
+  "EOF", "=", "+=", "-=", "*=", "/=",
+  "||", "&&", "|", "^", "&",
   "==", "!=", ",", ">", "<=", ">=", "<<", ">>",
   "+", "-", "*", "/", "++", "--", "~", "!",
   "void", "char", "int", "long",
@@ -298,6 +299,8 @@ int scan(struct token *t) {
     case '+':
       if ((c = next()) == '+') {
 	      t->token = T_INC;
+      } else if (c == '=') {
+        t->token = T_ASPLUS;
       } else {
 	      putback(c);
 	      t->token = T_PLUS;
@@ -308,16 +311,35 @@ int scan(struct token *t) {
 	      t->token = T_DEC;
       } else if (c == '>') {
         t->token = T_ARROW;
+      } else if (c == '=') {
+        t->token = T_ASMINUS;
+      } else if (isdigit(c)) {
+        // Negative int literal
+        // TODO: Scanner greedily forces -1 as 
+        // T_INTLIT, e.g. `1-1` without spaces
+        // is parsed as 1 -1
+        t->intvalue = -scanint(c);
+        t->token = T_INTLIT;
       } else {
 	      putback(c);
 	      t->token = T_MINUS;
       }
       break;
     case '*':
-      t->token = T_STAR;
+      if ((c = next()) == '=') {
+        t->token = T_ASSTAR;
+      } else {
+        putback(c);
+        t->token = T_STAR;
+      }
       break;
     case '/':
-      t->token = T_SLASH;
+      if ((c = next()) == '=') {
+        t->token = T_ASSLASH;
+      } else {
+        putback(c);
+        t->token = T_SLASH;
+      }
       break;
     case ';':
       t->token = T_SEMI;

@@ -47,7 +47,7 @@ struct symtable *newsym(char *name, int type, struct symtable *ctype,
   if (ptrtype(type) || inttype(type))
     node->size = nelems * typesize(type, ctype);
 
-  node->posn = posn;
+  node->st_posn = posn;
   node->next = NULL;
   node->member = NULL;
   node->initlist = NULL;

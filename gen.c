@@ -98,12 +98,12 @@ static int gen_funccall(struct ASTnode *n) {
     reg = genAST(gluetree->right, NOLABEL, NOLABEL, NOLABEL, gluetree->op);
     // The size param indicates that this the nth argument
     // to be passed to the function
-    cgcopyarg(reg, gluetree->size);
+    cgcopyarg(reg, gluetree->a_size);
 
     // Note down the total number of arguments (first gluetree
     // we encounter is the one with the biggest count)
     if (numargs == 0)
-      numargs = gluetree->size;
+      numargs = gluetree->a_size;
 
     genfreeregs();
     gluetree = gluetree->left;
@@ -120,8 +120,8 @@ static int genSWITCH(struct ASTnode *n) {
 
   // Create arrays for case values and their corresponding
   // labels.
-  caseval = (int *) malloc((n->intvalue + 1) * sizeof(int));
-  caselabel = (int *) malloc((n->intvalue + 1) * sizeof(int));
+  caseval = (int *) malloc((n->a_intvalue + 1) * sizeof(int));
+  caselabel = (int *) malloc((n->a_intvalue + 1) * sizeof(int));
 
   Ljumptop = genlabel();
   Lend = genlabel();
@@ -136,7 +136,7 @@ static int genSWITCH(struct ASTnode *n) {
 
   for (i = 0, c = n->right; c != NULL; i++, c = c->right) {
     caselabel[i] = genlabel();
-    caseval[i] = c->intvalue;
+    caseval[i] = c->a_intvalue;
     cglabel(caselabel[i]);
     if (c->op == A_DEFAULT)
       // Update default label with the right label
@@ -221,7 +221,7 @@ int genAST(struct ASTnode *n, int iflabel,
       else
         return cgcompare_and_set(n->op, leftreg, rightreg);
     case A_INTLIT:
-      return cgloadint(n->intvalue, n->type);
+      return cgloadint(n->a_intvalue, n->type);
     case A_IDENT:
       // Load the value if it is an r-value
       // or if it is a dereference.
@@ -235,6 +235,33 @@ int genAST(struct ASTnode *n, int iflabel,
         return NOREG;
       }
     case A_ASSIGN:
+    case A_ASPLUS:
+    case A_ASMINUS:
+    case A_ASSTAR:
+    case A_ASSLASH:
+      // For '+=' and friends, generate suitable code and
+      // get the register with the result. Then take the
+      // left child and make it the right child so that
+      // we can fall into the assignment code.
+      switch(n->op) {
+        case A_ASPLUS:
+          leftreg = cgadd(leftreg, rightreg);
+          n->right = n->left;
+          break;
+        case A_ASMINUS:
+          leftreg = cgsub(leftreg, rightreg);
+          n->right = n->left;
+          break;
+        case A_ASSTAR:
+          leftreg = cgmul(leftreg, rightreg);
+          n->right = n->left;
+          break;
+        case A_ASSLASH:
+          leftreg = cgdiv(leftreg, rightreg);
+          n->right = n->left;
+          break;
+      }
+
       // Handle differently based on whether we are storing
       // to an identifier or through a pointer
       switch (n->right->op) {
@@ -267,7 +294,7 @@ int genAST(struct ASTnode *n, int iflabel,
         // Else return the pointer to be used as an lvalue
         return leftreg;
     case A_SCALE:
-      switch (n->size) {
+      switch (n->a_size) {
         // Use bitshifts for powers of 2
         case 2:
           return cgshlconst(leftreg, 1);
@@ -276,11 +303,11 @@ int genAST(struct ASTnode *n, int iflabel,
         case 8:
           return cgshlconst(leftreg, 3);
         default:
-          rightreg = cgloadint(n->size, P_INT);
+          rightreg = cgloadint(n->a_size, P_INT);
           return cgmul(leftreg, rightreg);
       }
     case A_STRLIT:
-      return cgloadglobstr(n->intvalue);
+      return cgloadglobstr(n->a_intvalue);
     case A_AND:
       return cgand(leftreg, rightreg);
     case A_OR:
