@@ -3,6 +3,7 @@
 #include "expr.h"
 #include "gen.h"
 #include "misc.h"
+#include "opt.h"
 #include "scan.h"
 #include "stmt.h"
 #include "sym.h"
@@ -376,6 +377,8 @@ static struct symtable *function_declaration(char *funcname, int type,
   }
 
   tree = mkastunary(A_FUNCTION, type, tree, oldfuncsym, endlabel);
+
+  tree = optimise(tree);
 
   if (O_dumpAST) {
     dumpAST(tree, NOLABEL, 0);

@@ -1,7 +1,7 @@
 INCDIR=/tmp/include
 BINDIR=/tmp
 
-SRCS= cg.c decl.c expr.c gen.c main.c misc.c scan.c stmt.c sym.c tree.c types.c
+SRCS= cg.c decl.c expr.c gen.c main.c misc.c scan.c stmt.c sym.c tree.c types.c opt.c
 ARMSRCS= cg_arm.c decl.c expr.c gen.c main.c misc.c scan.c stmt.c \
 	sym.c tree.c types.c
 
