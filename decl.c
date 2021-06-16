@@ -399,16 +399,14 @@ static struct symtable *array_declaration(char *varname, int type,
   int maxelems;       // Max number of elems in the init list
   int *initlist;      // List of initial elements
   int i = 0, j;
-  int casttype, newtype;
 
   // Skip past '['
   scan(&Token);
 
-  if (Token.token == T_INTLIT) {
-    if (Token.intvalue <= 0)
-      fatald("Array size is illegal", Token.intvalue);
-    nelems = Token.intvalue;
-    scan(&Token);
+  if (Token.token != T_RBRACKET) {
+    nelems = parse_literal(P_INT);
+    if (nelems <= 0)
+      fatald("Array size is illegal", nelems);
   }
 
   match(T_RBRACKET, "]");
@@ -444,31 +442,13 @@ static struct symtable *array_declaration(char *varname, int type,
 
     // Loop getting new literal value and adding to initlist
     while (1) {
-      // Get original type
-      newtype = type;
-
+      
       // If the number of elems in the list exceeds the
       // size that was specified before, raise an error
       if (nelems != -1 && i == maxelems)
         fatal("Too many values in initialisation list");
 
-      if (Token.token == T_LPAREN) {
-        scan(&Token);
-        casttype = parse_cast();
-        rparen();
-
-        // Check that the two types are compatible, change the newtype so
-        // that parse_literal works since a void * can be assigned to any
-        // ptr type
-        if (casttype == type || (casttype == pointer_to(P_VOID) && ptrtype(type)))
-          newtype = P_NONE;
-        else
-          fatal("Type mismatch");
-        newtype = P_NONE;
-      }
-
-      initlist[i++] = parse_literal(newtype);
-      scan(&Token);
+      initlist[i++] = parse_literal(type);
 
       // If original size was not specified, we increase
       // the list size
@@ -504,7 +484,6 @@ static struct symtable *scalar_declaration(char *varname, int type,
     struct symtable *ctype, int class, struct ASTnode **tree) {
   struct symtable *sym = NULL;
   struct ASTnode *varnode, *exprnode;
-  int casttype;
   *tree = NULL;
 
   switch (class) {
@@ -530,24 +509,8 @@ static struct symtable *scalar_declaration(char *varname, int type,
     scan(&Token);
 
     if (class == C_GLOBAL) {
-      if (Token.token == T_LPAREN) {
-        scan(&Token);
-        casttype = parse_cast();
-        rparen();
-
-        // A 'void *' cast type can be assigned to any ptr type
-        if (casttype == type || (casttype == pointer_to(P_VOID) && ptrtype(type)))
-          // Relax parse type restrictions when we pass this to parse_literal
-          // We can do this since either the cast type matches the var type
-          // or we have a void*
-          type = P_NONE;
-        else
-          fatal("Type mismatch");
-      }
       sym->initlist = (int *) malloc(sizeof(int));
       sym->initlist[0] = parse_literal(type);
-      // Consume the literal
-      scan(&Token);
     } else if (class == C_LOCAL) {
       varnode = mkastleaf(A_IDENT, sym->type, sym, 0);
       // Get the expression for the assignment as an r-value
@@ -568,34 +531,47 @@ static struct symtable *scalar_declaration(char *varname, int type,
   return sym;
 }
 
-// Given a type, check that the current token is a literal of
-// that type. If it's an integer literal, return this value. If
-// it's a string literal, return the label number of the string.
-// It does not consume the current token. Relax parsing restrictions
-// if type is P_NONE.
+// Given a type, parse an expression of literals and ensure
+// that the type of this expression matches the given type.
+// Parse any type cast that precedes the expression.
+// If an integer literal, return this value.
+// If a string literal, return the label number of the string.
 int parse_literal(int type) {
-  if (Token.token == T_STRLIT) {
-    if (type == pointer_to(P_CHAR) || type == P_NONE)
-      return genglobstr(Text);
+  struct ASTnode *tree;
+
+  // Parse the expression and optimise the
+  // resulting AST tree
+  tree = optimise(binexpr(0));
+
+  // If there's a cast, get the child and
+  // mark it as having the type from the cast
+  if (tree->op == A_CAST) {
+    tree->left->type = tree->type;
+    tree = tree->left;
+  }
+  
+  if (tree->op != A_INTLIT && tree->op != A_STRLIT)
+    fatal("Cannot initialise globals with a general expression");
+
+  if (type == pointer_to(P_CHAR)) {
+    // e.g. to handle `char *c= "Hello";``
+    if (tree->op == A_STRLIT)
+      // We have a string literal, return label number
+      return tree->a_intvalue;
+
+    // We have a NULL
+    // e.g. to handle `char *c= (char *)0;``
+    if (tree->op == A_INTLIT && tree->a_intvalue == 0)
+      return 0;
   }
 
-  if (Token.token == T_INTLIT) {
-    switch (type) {
-      case P_CHAR:
-        if (Token.intvalue < 0 || Token.intvalue > 255)
-          fatal("Integer literal value too big for char type");
-      case P_NONE:
-      case P_INT:
-      case P_LONG:
-        break;
-      default:
-        fatal("Type mismatch: integer literal vs. variable");
-    }
-  } else {
-    fatal("Expecting an integer literal value");
-  }
+  // If we have an integer literal and the input type is
+  // wide enough to hold the literal
+  if (inttype(type) && typesize(type, NULL) >= typesize(tree->type, NULL))
+    return tree->a_intvalue;
 
-  return Token.intvalue;
+  fatal("Type mismatch: literal vs. variable");
+  return 0;
 }
 
 static struct symtable *symbol_declaration(int type, struct symtable *ctype, int class,
