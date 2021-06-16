@@ -10,6 +10,7 @@
 
 // Contains most recently scanned token from input
 struct token Token;
+struct token Peektoken;    // A look-ahead token
 
 // Operator precedence for each token
 // A bigger number indicates a higher precedence

@@ -10,7 +10,9 @@ extern char *Infilename;
 extern FILE *Outfile;
 extern char *Outfilename;
 
-extern struct token Token;
+extern struct token Token;        // Last token scanned
+extern struct token Peektoken;    // A look-ahead token
+
 extern char Text[TEXTLEN + 1];
 extern struct symtable *Functionid;             // Current function symtable entry
 

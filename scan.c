@@ -106,13 +106,27 @@ static int chrpos(char *s, int c) {
 
 // Scan and return an integer literal.
 static int scanint(int c) {
-  int k, val = 0;
+  int k, val = 0, radix = 10;
 
-  // We use chrpos instead of substracting the ASCII value of
-  // '0' from c so that we maintain the possibility of using this
-  // with hexadecimals in the future.
-  while ((k = chrpos("0123456789", c)) >= 0) {
-    val = val * 10 + k;
+  // Assume the radix is 10 at the beginning,
+  // but if it starts with 0 then we try to
+  // figure out the actual radix.
+  if (c == '0') {
+    // If it begins with 0x, its radix is 16
+    if ((c = next()) == 'x') {
+      radix = 16;
+      c = next();
+    } else {
+      // Otherwise the radix is 8
+      radix = 8;
+    }
+  }
+
+  // Convert each char into an int value
+  while ((k = chrpos("0123456789abcdef", tolower(c))) >= 0) {
+    if (k >= radix)
+      fatalc("Invalid digit in integer literal", c);
+    val = val * radix + k;
     c = next();
   }
 
@@ -229,10 +243,33 @@ static int keyword(char *s) {
   return 0;
 }
 
+// Read in a hexadecimal constant from the input
+// destined to be a single char
+static int hexchar(void) {
+  int c, h, n = 0, f = 0;
+
+  while (isxdigit(c = next())) {
+    // Convert from char to int value
+    h = chrpos("0123456789abcdef", tolower(c));
+    // Add to running hex value
+    n = n * 16 + h;
+    f = 1;
+  }
+
+  // Hit a non-hex character
+  putback(c);
+  
+  if (!f)
+    fatal("Missing digits after '\\x'");
+  if (n > 255)
+    fatal("Value out of range after '\\x'");
+  return n;
+}
+
 // Return the next character from a character
 // or string literal
 static int scanch(void) {
-  int c;
+  int i, c, c2;
 
   c = next();
 
@@ -249,6 +286,24 @@ static int scanch(void) {
         case '\\': return '\\';
         case '"':  return '"' ;
         case '\'': return '\'';
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+          // Handling octals
+          for (i = c2 = 0; isdigit(c) && c < '8'; c = next()) {
+            if (++i > 3)
+              break;
+            c2 = c2 * 8 + (c - '0');
+          }
+          putback(c);
+          return c2;
+        case 'x':
+          return hexchar();
         default:
           fatalc("unknown escape sequence", c);
     }
@@ -280,6 +335,14 @@ void reject_token(struct token *t) {
 
 int scan(struct token *t) {
   int c, tokentype;
+
+  if (Peektoken.token != 0) {
+    t->token = Peektoken.token;
+    t->tokstr = Peektoken.tokstr;
+    t->intvalue = Peektoken.intvalue;
+    Peektoken.token = 0;
+    return 1;
+  }
 
   // Return a rejected token if possible
   if (Rejtoken != NULL) {

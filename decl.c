@@ -668,6 +668,19 @@ static int param_declaration_list(struct symtable *oldfuncsym, struct symtable *
     protoptr = oldfuncsym->member;
 
   while (Token.token != T_RPAREN) {
+    // If the first token is void
+    if (Token.token == T_VOID) {
+      // e.g. int main(void) {}
+      // Check if the function has no params
+      scan(&Peektoken);
+      if (Peektoken.token == T_RPAREN) {
+        paramcnt = 0; 
+        // Move the Peektoken into the Token
+        scan(&Token); 
+        break;
+      }
+    }
+
     type = declaration_list(&ctype, C_PARAM, T_COMMA, T_RPAREN, &unused);
     if (type == -1)
       fatal("Bad type in parameter list");
