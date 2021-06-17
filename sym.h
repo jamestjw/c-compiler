@@ -33,3 +33,4 @@ struct symtable *findsymbol(char *s);
 void freeloclsyms(void);
 void copyfuncparams(int slot);
 void clear_symtable(void);
+void freestaticsyms(void);

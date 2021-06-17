@@ -226,7 +226,7 @@ int genAST(struct ASTnode *n, int iflabel,
       // Load the value if it is an r-value
       // or if it is a dereference.
       if (n->rvalue || parentASTop == A_DEREF) {
-        if (n->sym->class == C_GLOBAL) {
+        if (n->sym->class == C_GLOBAL || n->sym->class == C_STATIC) {
           return cgloadglob(n->sym, n->op);
         } else {
           return cgloadlocal(n->sym, n->op);
@@ -266,7 +266,8 @@ int genAST(struct ASTnode *n, int iflabel,
       // to an identifier or through a pointer
       switch (n->right->op) {
         case A_IDENT:
-          if (n->right->sym->class == C_GLOBAL)
+          if (n->right->sym->class == C_GLOBAL ||
+              n->right->sym->class == C_STATIC)
             return cgstorglob(leftreg, n->right->sym);
           else
             return cgstorlocal(leftreg, n->right->sym);
@@ -320,13 +321,13 @@ int genAST(struct ASTnode *n, int iflabel,
       return cgshr(leftreg, rightreg);
     case A_POSTINC:
     case A_POSTDEC:
-      if (n->sym->class == C_GLOBAL)
+      if (n->sym->class == C_GLOBAL || n->sym->class == C_STATIC)
         return (cgloadglob(n->sym, n->op));
       else
         return (cgloadlocal(n->sym, n->op));
     case A_PREINC:
     case A_PREDEC:
-      if (n->left->sym->class == C_GLOBAL)
+      if (n->left->sym->class == C_GLOBAL || n->left->sym->class == C_STATIC)
         return (cgloadglob(n->left->sym, n->op));
       else
         return (cgloadlocal(n->left->sym, n->op));

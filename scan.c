@@ -20,7 +20,7 @@ char *Tstring[] = {
   "if", "else", "while", "for", "return",
   "struct", "union", "enum", "typedef",
   "extern", "break", "continue", "switch",
-  "case", "default", "sizeof",
+  "case", "default", "sizeof", "static",
   "intlit", "strlit", ";", "identifier",
   "{", "}", "(", ")", "[", "]", ",", ".",
   "->", ":"
@@ -222,6 +222,8 @@ static int keyword(char *s) {
         return T_SWITCH;
       if (!strcmp(s, "sizeof"))
         return T_SIZEOF;
+      if (!strcmp(s, "static"))
+        return T_STATIC;
       break;
     case 't':
       if (!strcmp(s, "typedef"))

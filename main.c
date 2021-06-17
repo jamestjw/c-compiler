@@ -101,8 +101,8 @@ static char *do_compile(char *filename) {
   genpreamble();
   global_declarations();
   genpostamble();
-
   fclose(Outfile);
+  freestaticsyms();
 
   return Outfilename;
 }

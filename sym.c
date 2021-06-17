@@ -211,3 +211,20 @@ void freeloclsyms(void) {
   Functionid = NULL;
 }
 
+// Remove all static symbols from the global symbol table
+void freestaticsyms(void) {
+  struct symtable *g, *prev = NULL;
+
+  for (g = Globhead; g != NULL; g = g->next) {
+    if (g->class == C_STATIC) {
+      if (prev != NULL) prev->next = g->next;
+      else Globhead->next = g->next;
+
+      if (g == Globtail) {
+        if (prev != NULL) Globtail = prev;
+        else Globtail = Globhead;
+      }
+    }
+    prev = g;
+  }
+}

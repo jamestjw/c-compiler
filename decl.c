@@ -214,7 +214,17 @@ int parse_type(struct symtable **ctype, int *class) {
   while (exstatic) {
     switch (Token.token) {
       case T_EXTERN:
+        if (*class == C_STATIC)
+          fatal("Illegal to have extern and static at the same time");
         *class = C_EXTERN;
+        scan(&Token);
+        break;
+      case T_STATIC:
+        if (*class == C_LOCAL)
+          fatal("Compiler doesn't support static local declarations");
+        if (*class == C_EXTERN)
+          fatal("Illegal to have extern and static at the same time");
+        *class = C_STATIC;
         scan(&Token);
         break;
       default:
@@ -413,6 +423,7 @@ static struct symtable *array_declaration(char *varname, int type,
   switch(class) {
     case C_EXTERN:
     case C_GLOBAL:
+    case C_STATIC:
       sym = addglob(varname, pointer_to(type), ctype, S_ARRAY, class, 0, 0);
       break;
     case C_LOCAL:
@@ -422,7 +433,7 @@ static struct symtable *array_declaration(char *varname, int type,
   }
 
   if (Token.token == T_ASSIGN) {
-    if (class != C_GLOBAL)
+    if (class != C_GLOBAL && class != C_STATIC)
       fatals("Variable can not be initialised", varname);
     scan(&Token);
 
@@ -473,14 +484,14 @@ static struct symtable *array_declaration(char *varname, int type,
 
   sym->nelems = nelems;
   sym->size = sym->nelems * typesize(type, ctype);
-  if (class == C_GLOBAL)
+  if (class == C_GLOBAL || class == C_STATIC)
     genglobsym(sym);
 
   return sym;
 }
 
 static struct symtable *scalar_declaration(char *varname, int type,
-    struct symtable *ctype, int class, struct ASTnode **tree) {
+  struct symtable *ctype, int class, struct ASTnode **tree) {
   struct symtable *sym = NULL;
   struct ASTnode *varnode, *exprnode;
   *tree = NULL;
@@ -488,6 +499,7 @@ static struct symtable *scalar_declaration(char *varname, int type,
   switch (class) {
     case C_EXTERN:
     case C_GLOBAL:
+    case C_STATIC:
       sym = addglob(varname, type, ctype, S_VARIABLE, class, 1, 0);
       break;
     case C_LOCAL:
@@ -503,11 +515,11 @@ static struct symtable *scalar_declaration(char *varname, int type,
 
   if (Token.token == T_ASSIGN) {
     // Our compiler only allows this for global and local vars
-    if (class != C_GLOBAL && class != C_LOCAL)
+    if (class != C_GLOBAL && class != C_LOCAL && class != C_STATIC)
       fatals("Variable can not be initialised", varname);
     scan(&Token);
 
-    if (class == C_GLOBAL) {
+    if (class == C_GLOBAL || class == C_STATIC) {
       sym->initlist = (int *) malloc(sizeof(int));
       sym->initlist[0] = parse_literal(type);
     } else if (class == C_LOCAL) {
@@ -524,7 +536,7 @@ static struct symtable *scalar_declaration(char *varname, int type,
     }
   }
 
-  if (class == C_GLOBAL)
+  if (class == C_GLOBAL || class == C_STATIC)
     genglobsym(sym);
 
   return sym;
@@ -590,6 +602,7 @@ static struct symtable *symbol_declaration(int type, struct symtable *ctype, int
   switch (class) {
     case C_EXTERN:
     case C_GLOBAL:
+    case C_STATIC:
       if (findglob(varname) != NULL)
         fatals("Duplicate global variable declaration", varname);
     case C_LOCAL:
@@ -635,7 +648,7 @@ int declaration_list(struct symtable **ctype, int class, int et1, int et2,
     // If we parsed a function, there is no list
     // hence we return right away
     if (sym->stype == S_FUNCTION) {
-      if (class != C_GLOBAL)
+      if (class != C_GLOBAL && class != C_STATIC)
         fatal("Function definition not at global level");
       return type;
     }

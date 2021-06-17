@@ -41,13 +41,13 @@ enum {
   T_IF, T_ELSE, T_WHILE, T_FOR, T_RETURN,
   T_STRUCT, T_UNION, T_ENUM, T_TYPEDEF,
   T_EXTERN, T_BREAK, T_CONTINUE, T_SWITCH,
-  T_CASE, T_DEFAULT, T_SIZEOF,
+  T_CASE, T_DEFAULT, T_SIZEOF, T_STATIC,
 
   // Structural tokens
   T_INTLIT, T_STRLIT, T_SEMI, T_IDENT,
   T_LBRACE, T_RBRACE, T_LPAREN, T_RPAREN,
   T_LBRACKET, T_RBRACKET, T_COMMA, T_DOT,
-  T_ARROW, T_COLON
+  T_ARROW, T_COLON,
 };
 
 // AST node types
@@ -124,6 +124,7 @@ enum {
   C_ENUMTYPE,   // A named enumeration type
   C_ENUMVAL,    // A named enumeration value
   C_TYPEDEF,    // A named typedef
+  C_STATIC,
 };
 
 enum {
