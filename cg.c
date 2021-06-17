@@ -755,7 +755,8 @@ int cgalign(int type, int offset, int direction) {
     case P_LONG:
       break;
     default:
-      fatald("Bad type in cg_align", type);
+      if (!ptrtype(type))
+        fatald("Bad type in cg_align", type);
   }
 
   alignment = 4;

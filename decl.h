@@ -3,4 +3,5 @@ void global_declarations(void);
 int parse_type(struct symtable **ctype, int *class);
 int parse_cast(void);
 int parse_literal(int type);
+int parse_stars(int type);
 int declaration_list(struct symtable **ctype, int class, int et1, int et2, struct ASTnode **gluetree);

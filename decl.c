@@ -15,7 +15,6 @@ int Looplevel;
 int Switchlevel;
 
 int parse_type(struct symtable **ctype, int *class);
-static int parse_stars(int type);
 static int param_declaration_list(struct symtable *oldfuncsym, struct symtable *newfuncsym);
 
 // When this function is called, the current token
@@ -287,7 +286,7 @@ int parse_type(struct symtable **ctype, int *class) {
 // passed in, or a pointer to it (with
 // support for multiple levels of
 // indirection)
-static int parse_stars(int type) {
+int parse_stars(int type) {
   while (1) {
     if (Token.token != T_STAR)
       break;

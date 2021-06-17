@@ -205,9 +205,23 @@ static struct ASTnode *postfix(void) {
 // Parse a primary factor and return a node representing it
 static struct ASTnode *primary(void) {
   struct ASTnode *n = NULL;
-  int id, type = 0;
+  int id;
+  int type = 0;
+  int size, class;
+  struct symtable *ctype;
 
   switch (Token.token) {
+    case T_SIZEOF:
+      scan(&Token);
+      if (Token.token != T_LPAREN)
+        fatal("Left parenthesis expected after sizeof");
+      scan(&Token);
+
+      type = parse_stars(parse_type(&ctype, &class));
+      size = typesize(type, ctype);
+      rparen();
+
+      return mkastleaf(A_INTLIT, P_INT, NULL, size);
     case T_INTLIT:
       // Create AST node with P_CHAR type if within
       // P_CHAR range
