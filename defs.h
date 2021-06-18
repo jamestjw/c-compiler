@@ -24,7 +24,7 @@ enum {
   // Binary operators
   T_ASSIGN, T_ASPLUS, T_ASMINUS,
   T_ASSTAR, T_ASSLASH,
-  T_LOGOR, T_LOGAND,
+  T_QUESTION, T_LOGOR, T_LOGAND,
   T_OR, T_XOR, T_AMPER,
   T_EQ, T_NE,
   T_LT, T_GT, T_LE, T_GE,
@@ -54,7 +54,7 @@ enum {
 // Binary operators line up exactly with token types
 enum {
   A_ASSIGN=1, A_ASPLUS, A_ASMINUS, A_ASSTAR, A_ASSLASH,
-  A_LOGOR, A_LOGAND, A_OR, A_XOR, A_AND,
+  A_TERNARY, A_LOGOR, A_LOGAND, A_OR, A_XOR, A_AND,
   A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE, A_LSHIFT, A_RSHIFT,
   A_ADD, A_SUBTRACT, A_MULTIPLY, A_DIVIDE,
   A_INTLIT, A_STRLIT, A_IDENT, A_GLUE,

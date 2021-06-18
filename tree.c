@@ -73,6 +73,15 @@ void dumpAST(struct ASTnode *n, int label, int level) {
       dumpAST(n->left, Lend, level + 2);
       dumpAST(n->right, NOLABEL, level + 2);
       return;
+    case A_TERNARY:
+      Lfalse = gendumplabel();
+      Lend = gendumplabel();
+      for (int i = 0; i < level; i++) fprintf(stdout, " ");
+      fprintf(stdout, "A_TERNARY\n");
+      dumpAST(n->left, NOLABEL, level+2);
+      dumpAST(n->mid, Lfalse, level+2);
+      dumpAST(n->right, Lend, level+2);
+      return;
   }
 
   if (n->op == A_GLUE) level = -2;

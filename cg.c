@@ -55,13 +55,18 @@ void cgdataseg() {
 }
 
 // Mark all registers as available
-void freeall_registers(void) {
-  freereg[0] = freereg[1] = freereg[2] = freereg[3] = 1;
+// If keepreg is positive, don't free that one
+void freeall_registers(int keepreg) {
+  int i;
+  for (i = 0; i < NUMFREEREGS; i++) {
+    if (i != keepreg)
+      freereg[i] = 1;
+  }
 }
 
 // Allocate a free register and returns the corresponding
 // identifier. Program exits if no available registers remain.
-static int alloc_register(void) {
+int alloc_register(void) {
   for (int i = 0; i < 4; ++i) {
     if (freereg[i]) {
       freereg[i] = 0;
@@ -89,7 +94,7 @@ static int newlocaloffset(int type) {
 }
 
 void cgpreamble() {
-  freeall_registers();
+  freeall_registers(NOREG);
   cgtextseg();
     fprintf(Outfile,
 	  "# internal switch(expr) routine\n"
@@ -430,7 +435,7 @@ int cgcompare_and_jump(int ASTop, int r1, int r2, int label) {
    fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
    // jne L1
    fprintf(Outfile, "\t%s\tL%d\n", invcmplist[ASTop - A_EQ], label);
-   freeall_registers();
+   freeall_registers(NOREG);
    return NOREG;
 }
 
@@ -805,4 +810,9 @@ void cgswitch(int reg, int casecount, int toplabel,
   fprintf(Outfile, "\tmovq\t%s, %%rax\n", reglist[reg]);
   fprintf(Outfile, "\tleaq\tL%d(%%rip), %%rdx\n", label);
   fprintf(Outfile, "\tjmp\tswitch\n");
+}
+
+void cgmove(int r1, int r2) {
+  // movq %r1, %r2
+  fprintf(Outfile, "\tmovq\t%s, %s\n", reglist[r1], reglist[r2]);
 }

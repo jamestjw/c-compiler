@@ -1,4 +1,4 @@
-void freeall_registers(void);
+void freeall_registers(int keepreg);
 void cgpreamble();
 void cgpostamble();
 void cgfuncpreamble(struct symtable *n);
@@ -83,4 +83,5 @@ void cgcopyarg(int r, int argposn);
 int cgalign(int type, int offset, int direction);
 void cgswitch(int reg, int casecount, int toplabel,
               int *caselabel, int *caseval, int defaultlabel);
-
+int alloc_register(void);
+void cgmove(int r1, int r2);

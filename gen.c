@@ -160,6 +160,43 @@ static int genSWITCH(struct ASTnode *n) {
   return NOREG;
 }
 
+static int gen_ternary(struct ASTnode *n) {
+  int Lfalse, Lend;
+  int reg, expreg;
+
+  // Generate labels for the false expression
+  // and the end of the overall expression.
+  Lfalse = genlabel();
+  Lend = genlabel();
+
+  // Generate condition code followed by jump to
+  // the false label
+  genAST(n->left, Lfalse, NOLABEL, NOLABEL, n->op);
+  genfreeregs(NOREG);
+
+  // Alloc register to store result of ternary expr
+  reg = alloc_register();
+ 
+  // Generate code for the true expression, and the false label
+  expreg = genAST(n->mid, NOLABEL, NOLABEL, NOLABEL, n->op); 
+  // Move the expression result into the known register
+  cgmove(expreg, reg);
+  // Do not free register containing result
+  genfreeregs(reg);
+  cgjump(Lend);
+  cglabel(Lfalse);
+
+  // Generate the false expression and the end label
+  expreg = genAST(n->right, NOLABEL, NOLABEL, NOLABEL, n->op);
+  // Move expression result into the known register
+  cgmove(expreg, reg);
+  // Do not free register containing result
+  genfreeregs(reg);
+  cglabel(Lend);
+
+  return reg;
+}
+
 // Given an AST node, recursively generate assembly
 // code for it. Returns the identifier of the register
 // that contains the results of evaluating this node.
@@ -193,6 +230,8 @@ int genAST(struct ASTnode *n, int iflabel,
       return gen_funccall(n);
     case A_SWITCH:
       return genSWITCH(n);
+    case A_TERNARY:
+      return gen_ternary(n);
   }
 
   if (n->left) leftreg = genAST(n->left, NOLABEL, NOLABEL, NOLABEL, n->op);
@@ -216,7 +255,7 @@ int genAST(struct ASTnode *n, int iflabel,
       // If the parent node is an A_IF, generate a
       // compare and jump, otherwise compare registers
       // and set to either 0 or 1
-      if (parentASTop == A_IF || parentASTop == A_WHILE)
+      if (parentASTop == A_IF || parentASTop == A_WHILE || parentASTop == A_TERNARY)
         return cgcompare_and_jump(n->op, leftreg, rightreg, iflabel);
       else
         return cgcompare_and_set(n->op, leftreg, rightreg);
@@ -355,7 +394,7 @@ int genAST(struct ASTnode *n, int iflabel,
 
 void genpreamble()        { cgpreamble(); }
 void genpostamble()       { cgpostamble(); }
-void genfreeregs()        { freeall_registers(); }
+void genfreeregs()        { freeall_registers(NOREG); }
 void genprintint(int reg) { cgprintint(reg); }
 
 void genglobsym(struct symtable *node) { cgglobsym(node); }

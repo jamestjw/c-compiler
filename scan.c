@@ -13,7 +13,7 @@ static struct token *Rejtoken = NULL;
 // List of token strings, for debugging purposes
 char *Tstring[] = {
   "EOF", "=", "+=", "-=", "*=", "/=",
-  "||", "&&", "|", "^", "&",
+  "?", "||", "&&", "|", "^", "&",
   "==", "!=", ",", ">", "<=", ">=", "<<", ">>",
   "+", "-", "*", "/", "++", "--", "~", "!",
   "void", "char", "int", "long",
@@ -506,6 +506,9 @@ int scan(struct token *t) {
       break;
     case ':':
       t->token = T_COLON;
+      break;
+    case '?':
+      t->token = T_QUESTION;
       break;
     default:
       // If a digit was encountered, scan the entire number

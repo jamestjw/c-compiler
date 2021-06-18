@@ -17,6 +17,7 @@ struct token Peektoken;    // A look-ahead token
 static int OpPrec[] = {
   0, 10, 10,        // T_EOF, T_ASSIGN, T_ASPLUS,
   10, 10, 10,       // T_ASMINUS, T_ASSTAR, T_ASSLASH,
+  15,               // T_QUESTION
   20, 30,		        // T_LOGOR, T_LOGAND
   40, 50, 60,			  // T_OR, T_XOR, T_AMPER
   70, 70,			      // T_EQ, T_NE
@@ -387,33 +388,40 @@ struct ASTnode *binexpr(int ptp) {
     // type.
     ASTop = binastop(tokentype);
 
-    // Assignment expressions are a special case
-    if (ASTop == A_ASSIGN) {
-      right->rvalue = 1;
-      // Ensure that right expression matches the left
-      right = modify_type(right, left->type, 0);
-      if (right == NULL)
-        fatal("Incompatible expression in assignment");
-
-     // Swap the left and right trees so that code for the
-     // right expression will be generated before the left
-     ltemp = left; left = right; right = ltemp;
-    } else {
-      // Since we are not doing an assignment, both trees should
-      // be rvalues
-      left->rvalue = right->rvalue = 1;
-
-      ltemp = modify_type(left, right->type, ASTop);
-      rtemp = modify_type(right, left->type, ASTop);
-      if (ltemp == NULL && rtemp == NULL)
-        fatal("Incompatible types in binary expression");
-      // When we successfully modify one tree to fit the
-      // other, we leave the other one as it is.
-      if (ltemp != NULL)
-        left = ltemp;
-      if (rtemp != NULL)
-        right = rtemp;
+    switch (ASTop) {
+      case A_TERNARY:
+        match(T_COLON, ":");
+        ltemp = binexpr(0);
+        // TODO: For the type, we should choose the wider of the TRUE and FALSE expressions
+        return mkastnode(A_TERNARY, right->type, left, right, ltemp, NULL, 0);
+      case A_ASSIGN:
+        right->rvalue = 1;
+        // Ensure that right expression matches the left
+        right = modify_type(right, left->type, 0);
+        if (right == NULL)
+          fatal("Incompatible expression in assignment");
+        // Swap the left and right trees so that code for the
+        // right expression will be generated before the left
+        ltemp = left; left = right; right = ltemp;
+        break;
+      default:
+        // Since we are not doing an assignment or ternary, 
+        // both trees should be rvalues
+        left->rvalue = right->rvalue = 1;
+  
+        ltemp = modify_type(left, right->type, ASTop);
+        rtemp = modify_type(right, left->type, ASTop);
+        if (ltemp == NULL && rtemp == NULL) {
+          fatal("Incompatible types in binary expression");
+        }
+        // When we successfully modify one tree to fit the
+        // other, we leave the other one as it is.
+        if (ltemp != NULL)
+          left = ltemp;
+        if (rtemp != NULL)
+          right = rtemp;
     }
+
     // Join that subtree with the left node
     // The node contains an expression of the same type
     // as the left node.
@@ -431,6 +439,7 @@ struct ASTnode *binexpr(int ptp) {
 
   // When the next operator has a precedence equal or lower,
   // we return the tree
+  left->rvalue = 1;
   return left;
 }
 

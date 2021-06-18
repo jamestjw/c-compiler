@@ -106,7 +106,7 @@ static void set_int_offset(int val) {
 }
 
 void cgpreamble() {
-  freeall_registers();
+  freeall_registers(NOREG);
 
   fputs("\t.text\n", Outfile);
 }
@@ -348,7 +348,7 @@ int cgcompare_and_jump(int ASTop, int r1, int r2, int label) {
    fprintf(Outfile, "\tcmp\t%s, %s\n", reglist[r1], reglist[r2]);
    // bne L1
    fprintf(Outfile, "\t%s\tL%d\n", brlist[ASTop - A_EQ], label);
-   freeall_registers();
+   freeall_registers(NOREG);
    return NOREG;
 }
 
