@@ -1,5 +1,5 @@
 #include <stdio.h>
-struct foo { int x; char y; long z; }; 
+struct foo { int x; char y; long z; };
 typedef struct foo blah;
 
 // Symbol table structure

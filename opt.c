@@ -31,7 +31,7 @@ static struct ASTnode *fold2(struct ASTnode *n) {
       return n;
   }
 
-  return mkastleaf(A_INTLIT, n->type, NULL, val);
+  return mkastleaf(A_INTLIT, n->type, NULL,NULL, val);
 }
 
 // Fold on AST tree with a unary operator and one
@@ -43,7 +43,7 @@ static struct ASTnode *fold1(struct ASTnode *n) {
   val = n->left->a_intvalue;
   switch (n->op) {
     case A_WIDEN:
-      // We have the literal value copied so that 
+      // We have the literal value copied so that
       // we can directly return a node with the
       // target type
       break;
@@ -57,7 +57,7 @@ static struct ASTnode *fold1(struct ASTnode *n) {
       return n;
   }
 
-  return mkastleaf(A_INTLIT, n->type, NULL, val);
+  return mkastleaf(A_INTLIT, n->type, NULL, NULL, val);
 }
 
 static struct ASTnode *fold(struct ASTnode *n) {

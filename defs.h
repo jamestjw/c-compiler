@@ -90,6 +90,7 @@ struct symtable {
 struct ASTnode {
   int op;                   // "Operation" to be performed on the tree
   int type;                 // Type of expression this tree generates
+  struct symtable *ctype;   // If struct/union, ptr to that type
   int rvalue;               // True if the node should yield a r-value
   struct ASTnode *left;     // Left, middle and right child trees
   struct ASTnode *mid;

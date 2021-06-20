@@ -821,7 +821,7 @@ int cglogor(int r1, int r2) {
   // Generate two labels
   int Ltrue = genlabel();
   int Lend = genlabel();
- 
+
   //           test    %r10, %r10              # Test x's boolean value
   //           jne     L13                     # True, jump to L13
   //           test    %r11, %r11              # Test y's boolean value
@@ -831,7 +831,7 @@ int cglogor(int r1, int r2) {
   //   L13:
   //           movq    $1, %r10                # Set %r10 to true
   //   L14:
-  //           movl    %r10d, z(%rip)          # Save boolean result to z  
+  //           movl    %r10d, z(%rip)          # Save boolean result to z
 
   fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r1], reglist[r1]);
   fprintf(Outfile, "\tjne\tL%d\n", Ltrue);  // jump if not equal to zero

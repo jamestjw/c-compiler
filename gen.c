@@ -177,9 +177,9 @@ static int gen_ternary(struct ASTnode *n) {
 
   // Alloc register to store result of ternary expr
   reg = alloc_register();
- 
+
   // Generate code for the true expression, and the false label
-  expreg = genAST(n->mid, NOLABEL, NOLABEL, NOLABEL, n->op); 
+  expreg = genAST(n->mid, NOLABEL, NOLABEL, NOLABEL, n->op);
   // Move the expression result into the known register
   cgmove(expreg, reg);
   // Do not free register containing result

@@ -6,7 +6,7 @@ ARMSRCS= cg_arm.c decl.c expr.c gen.c main.c misc.c scan.c stmt.c \
 	sym.c tree.c types.c
 
 ccc: $(SRCS)
-	cc -o ccc -g -Wall -DINCDIR=\"$(INCDIR)\" $(SRCS) 
+	cc -o ccc -g -Wall -DINCDIR=\"$(INCDIR)\" $(SRCS)
 
 cccarm: $(ARMSRCS)
 	cc -o cccarm -g -Wall $(ARMSRCS)

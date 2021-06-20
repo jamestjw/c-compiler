@@ -309,11 +309,10 @@ int parse_stars(int type) {
 
 // Parsing of '(' and ')' should be done
 // by the caller of this function
-int parse_cast(void) {
+int parse_cast(struct symtable **ctype) {
   int type, class;
-  struct symtable *ctype;
 
-  type = parse_stars(parse_type(&ctype, &class));
+  type = parse_stars(parse_type(ctype, &class));
 
   if (type == P_STRUCT || type == P_UNION || type == P_VOID)
     fatal("Cannot cast to a struct, union or void type");
@@ -385,7 +384,7 @@ static struct symtable *function_declaration(char *funcname, int type,
       fatal("No return for function with non-void type");
   }
 
-  tree = mkastunary(A_FUNCTION, type, tree, oldfuncsym, endlabel);
+  tree = mkastunary(A_FUNCTION, type, ctype, tree, oldfuncsym, endlabel);
 
   tree = optimise(tree);
 
@@ -452,7 +451,7 @@ static struct symtable *array_declaration(char *varname, int type,
 
     // Loop getting new literal value and adding to initlist
     while (1) {
-      
+
       // If the number of elems in the list exceeds the
       // size that was specified before, raise an error
       if (nelems != -1 && i == maxelems)
@@ -523,16 +522,16 @@ static struct symtable *scalar_declaration(char *varname, int type,
       sym->initlist = (int *) malloc(sizeof(int));
       sym->initlist[0] = parse_literal(type);
     } else if (class == C_LOCAL) {
-      varnode = mkastleaf(A_IDENT, sym->type, sym, 0);
+      varnode = mkastleaf(A_IDENT, sym->type, sym->ctype, sym, 0);
       // Get the expression for the assignment as an r-value
       exprnode = binexpr(0);
       exprnode->rvalue = 1;
 
-      exprnode = modify_type(exprnode, varnode->type, 0);
+      exprnode = modify_type(exprnode, varnode->type, varnode->ctype, 0);
       if (exprnode == NULL)
         fatal("Incompatible expression in assignment");
 
-      *tree = mkastnode(A_ASSIGN, exprnode->type, exprnode, NULL, varnode, NULL, 0);
+      *tree = mkastnode(A_ASSIGN, exprnode->type, exprnode->ctype, exprnode, NULL, varnode, NULL, 0);
     }
   }
 
@@ -560,7 +559,7 @@ int parse_literal(int type) {
     tree->left->type = tree->type;
     tree = tree->left;
   }
-  
+
   if (tree->op != A_INTLIT && tree->op != A_STRLIT)
     fatal("Cannot initialise globals with a general expression");
 
@@ -641,10 +640,10 @@ int declaration_list(struct symtable **ctype, int class, int et1, int et2,
   while (1) {
     // Check if this symbol is a pointer
     type = parse_stars(inittype);
-   
+
     // Parse this symbol
     sym = symbol_declaration(type, *ctype, class, &tree);
-    
+
     // If we parsed a function, there is no list
     // hence we return right away
     if (sym->stype == S_FUNCTION) {
@@ -652,12 +651,12 @@ int declaration_list(struct symtable **ctype, int class, int et1, int et2,
         fatal("Function definition not at global level");
       return type;
     }
-  
+
     if (tree != NULL) {
       if (*gluetree == NULL) {
         *gluetree = tree;
       } else {
-        *gluetree = mkastnode(A_GLUE, P_NONE, *gluetree, NULL, tree, NULL, 0);
+        *gluetree = mkastnode(A_GLUE, P_NONE, NULL, *gluetree, NULL, tree, NULL, 0);
       }
       tree = NULL;
     }
@@ -686,9 +685,9 @@ static int param_declaration_list(struct symtable *oldfuncsym, struct symtable *
       // Check if the function has no params
       scan(&Peektoken);
       if (Peektoken.token == T_RPAREN) {
-        paramcnt = 0; 
+        paramcnt = 0;
         // Move the Peektoken into the Token
-        scan(&Token); 
+        scan(&Token);
         break;
       }
     }

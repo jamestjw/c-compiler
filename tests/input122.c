@@ -9,7 +9,7 @@ int main() {
       printf("x %d, y %d, x || y %d, x && y %d\n", x, y, z1, z2);
     }
   }
-  
+
   //z= x || y;
   return(0);
 }

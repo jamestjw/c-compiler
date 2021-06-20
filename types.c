@@ -81,7 +81,8 @@ int ptrtype(int type) {
 //
 // `op` should not be zero if this tree will be a part of a binary
 // operation.
-struct ASTnode *modify_type(struct ASTnode *tree, int rtype, int op) {
+struct ASTnode *modify_type(struct ASTnode *tree, int rtype,
+        struct symtable *rctype, int op) {
   int ltype;
   int lsize, rsize;
 
@@ -105,7 +106,7 @@ struct ASTnode *modify_type(struct ASTnode *tree, int rtype, int op) {
     if (lsize > rsize) return NULL;
 
     // Widen to the right
-    if (rsize > lsize) return mkastunary(A_WIDEN, rtype, tree, NULL, 0);
+    if (rsize > lsize) return mkastunary(A_WIDEN, rtype, NULL, tree, NULL, 0);
   }
 
   // For pointers
@@ -126,7 +127,7 @@ struct ASTnode *modify_type(struct ASTnode *tree, int rtype, int op) {
       rsize = genprimsize(value_at(rtype));
       // Scale the int if necessary
       if (rsize > 1)
-        return mkastunary(A_SCALE, rtype, tree, NULL, rsize);
+        return mkastunary(A_SCALE, rtype, rctype, tree, NULL, rsize);
       else
         return tree;
     }

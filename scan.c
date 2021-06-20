@@ -26,6 +26,9 @@ char *Tstring[] = {
   "->", ":"
 };
 
+// Whether or not we are at a start of a line
+static int Linestart = 1;
+
 // Get the next char from the input file.
 static int next(void) {
   int c, l;
@@ -43,7 +46,8 @@ static int next(void) {
   // character from the input stream.
   c = fgetc(Infile);
 
-  while (c == '#') { // Hit a preprocessor statement
+  while (Linestart && c == '#') { // Hit a preprocessor statement
+    Linestart = 0;    // No longer at start of line
     scan(&Token);
 
     // This is the line number of the following line
@@ -69,11 +73,17 @@ static int next(void) {
     // Skip to EOL
     while ((c = fgetc(Infile)) != '\n');
     c = fgetc(Infile);
+    Linestart = 1;    // Back at start of line
   }
+
+  Linestart = 0;
 
   // Track what line we are on for the purposes
   // of printing debug messages.
-  if ('\n' == c) Line++;
+  if ('\n' == c) {
+    Line++;
+    Linestart = 1;
+  }
 
   return c;
 }
@@ -264,7 +274,7 @@ static int hexchar(void) {
 
   // Hit a non-hex character
   putback(c);
-  
+
   if (!f)
     fatal("Missing digits after '\\x'");
   if (n > 255)
@@ -384,7 +394,7 @@ int scan(struct token *t) {
         t->token = T_ASMINUS;
       } else if (isdigit(c)) {
         // Negative int literal
-        // TODO: Scanner greedily forces -1 as 
+        // TODO: Scanner greedily forces -1 as
         // T_INTLIT, e.g. `1-1` without spaces
         // is parsed as 1 -1
         t->intvalue = -scanint(c);
