@@ -74,12 +74,23 @@ static struct ASTnode *array_access(void) {
   struct symtable *aryptr;
 
   // Ensure that such an identifier exists and points to
-  // an array
-  if ((aryptr = findsymbol(Text)) == NULL || aryptr->stype != S_ARRAY) {
-    fatals("Undeclared array", Text);
+  // an array or a pointer
+  if ((aryptr = findsymbol(Text)) == NULL) {
+    fatals("Undeclared variable", Text);
+  }
+  if (aryptr->stype != S_ARRAY && 
+      (aryptr->stype == S_VARIABLE && !ptrtype(aryptr->type))) {
+    fatals("Not an array or pointer", Text);
   }
 
-  left = mkastleaf(A_ADDR, aryptr->type, aryptr, 0);
+  // Make a leaf node that points at the base of the array
+  // or load the pointer's value as an rvalue
+  if (aryptr->stype == S_ARRAY)
+    left = mkastleaf(A_ADDR, aryptr->type, aryptr, 0);
+  else {
+    left = mkastleaf(A_IDENT, aryptr->type, aryptr, 0);
+    left->rvalue = 1;
+  }
 
   // Consume the '['
   scan(&Token);
@@ -158,6 +169,7 @@ static struct ASTnode *postfix(void) {
   struct ASTnode *n;
   struct symtable *varptr;
   struct symtable *enumptr;
+  int rvalue = 0;
 
   // IF identifier matches an enum value, convert it
   // to an INTLIT node
@@ -185,21 +197,41 @@ static struct ASTnode *postfix(void) {
 
   // We assume that we have found a variable,
   // so we check for its existence
-  if ((varptr = findsymbol(Text)) == NULL || 
-      (varptr->stype != S_VARIABLE && varptr->stype != S_ARRAY))
+  if ((varptr = findsymbol(Text)) == NULL) 
     fatals("Unknown variable", Text);
+
+  switch(varptr->stype) {
+    case S_VARIABLE:
+      break;
+    case S_ARRAY:
+      rvalue = 1; break;
+    default:
+      // Other types do not work with postfix operators
+      fatals("Identifier not a scalar or array variable", Text);
+  }
 
   switch(Token.token) {
     case T_INC:
+      if (rvalue == 1)
+        fatals("Cannot ++ on rvalue", Text);
       scan(&Token);
       n = mkastleaf(A_POSTINC, varptr->type, varptr, 0);
       break;
     case T_DEC:
+      if (rvalue == 1)
+        fatals("Cannot -- on rvalue", Text);
       scan(&Token);
       n = mkastleaf(A_POSTDEC, varptr->type, varptr, 0);
       break;
     default:
-      n = mkastleaf(A_IDENT, varptr->type, varptr, 0);
+      // Ensure that an array identifier without a postfix 
+      // operator can not be treated as an l-value.
+      if (varptr->stype == S_ARRAY) {
+        n = mkastleaf(A_ADDR, varptr->type, varptr, 0);
+        n->rvalue = rvalue;
+      } else {
+        n = mkastleaf(A_IDENT, varptr->type, varptr, 0);
+      }
   }
   return n;
 }
@@ -288,8 +320,9 @@ struct ASTnode *prefix(void) {
       scan(&Token);
       tree = prefix();
 
-      if (tree->op != A_IDENT)
+      if (tree->op != A_IDENT) {
         fatal("& operator must be followed by an identifier");
+      }
 
       // Change the operator to A_ADDR, and change the type
       tree->op = A_ADDR;
