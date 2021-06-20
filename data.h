@@ -34,3 +34,4 @@ extern int O_keepasm;		  // Flag controlling whether we keep any assembly files
 extern int O_assemble;		// Flag controlling whether we assemble the assembly files
 extern int O_dolink;		  // Whether we should link the object files
 extern int O_verbose;		  // Whether we should print info on compilation stages
+extern int O_dumpsym;		  // Whether the symbol table should be dumped at the end of every source code file

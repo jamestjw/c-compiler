@@ -11,7 +11,7 @@ void match(int t, char *what) {
   if (Token.token == t) {
     scan(&Token);
   } else {
-    fprintf(stderr, "'%s' expected on line %d, found '%s' instead\n", what, Line, Token.tokstr);
+    fprintf(stderr, "'%s' expected on line %d of %s, found '%s' instead\n", what, Line, Infilename, Token.tokstr);
     exit(1);
   }
 }

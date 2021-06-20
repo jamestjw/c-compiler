@@ -816,3 +816,54 @@ void cgmove(int r1, int r2) {
   // movq %r1, %r2
   fprintf(Outfile, "\tmovq\t%s, %s\n", reglist[r1], reglist[r2]);
 }
+
+int cglogor(int r1, int r2) {
+  // Generate two labels
+  int Ltrue = genlabel();
+  int Lend = genlabel();
+ 
+  //           test    %r10, %r10              # Test x's boolean value
+  //           jne     L13                     # True, jump to L13
+  //           test    %r11, %r11              # Test y's boolean value
+  //           jne     L13                     # True, jump to L13
+  //           movq    $0, %r10                # Neither true, set %r10 to false
+  //           jmp     L14                     # and jump to L14
+  //   L13:
+  //           movq    $1, %r10                # Set %r10 to true
+  //   L14:
+  //           movl    %r10d, z(%rip)          # Save boolean result to z  
+
+  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r1], reglist[r1]);
+  fprintf(Outfile, "\tjne\tL%d\n", Ltrue);  // jump if not equal to zero
+  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r2], reglist[r2]);
+  fprintf(Outfile, "\tjne\tL%d\n", Ltrue);
+
+  fprintf(Outfile, "\tmovq\t$0, %s\n", reglist[r1]);
+  fprintf(Outfile, "\tjmp\tL%d\n", Lend);
+  cglabel(Ltrue);
+  fprintf(Outfile, "\tmovq\t$1, %s\n", reglist[r1]);
+  cglabel(Lend);
+  free_register(r2);
+  return r1;
+}
+
+int cglogand(int r1, int r2) {
+  int Lfalse = genlabel();
+  int Lend = genlabel();
+
+  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r1], reglist[r1]);
+  fprintf(Outfile, "\tje\tL%d\n", Lfalse);
+
+  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r2], reglist[r2]);
+  fprintf(Outfile, "\tje\tL%d\n", Lfalse);
+
+  fprintf(Outfile, "\tmovq\t$1, %s\n", reglist[r1]);
+  fprintf(Outfile, "\tjmp\tL%d\n", Lend);
+
+  cglabel(Lfalse);
+  fprintf(Outfile, "\tmovq\t$0, %s\n", reglist[r1]);
+  cglabel(Lend);
+  free_register(r2);
+
+  return r1;
+}

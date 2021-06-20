@@ -228,3 +228,139 @@ void freestaticsyms(void) {
     prev = g;
   }
 }
+
+static void dumptable(struct symtable *head, char *name, int indent);
+
+static void dumpsym(struct symtable *sym, int indent) {
+  int i;
+
+  for (i = 0; i < indent; i++)
+    printf(" ");
+  switch (sym->type & (~0xf)) {
+  case P_VOID:
+    printf("void ");
+    break;
+  case P_CHAR:
+    printf("char ");
+    break;
+  case P_INT:
+    printf("int ");
+    break;
+  case P_LONG:
+    printf("long ");
+    break;
+  case P_STRUCT:
+    if (sym->ctype != NULL)
+      printf("struct %s ", sym->ctype->name);
+    else
+      printf("struct %s ", sym->name);
+    break;
+  case P_UNION:
+    if (sym->ctype != NULL)
+      printf("union %s ", sym->ctype->name);
+    else
+      printf("union %s ", sym->name);
+    break;
+  default:
+    printf("unknown type ");
+  }
+
+  for (i = 0; i < (sym->type & 0xf); i++)
+    printf("*");
+  printf("%s", sym->name);
+
+  switch (sym->stype) {
+  case S_VARIABLE:
+    break;
+  case S_FUNCTION:
+    printf("()");
+    break;
+  case S_ARRAY:
+    printf("[]");
+    break;
+  default:
+    printf(" unknown stype");
+  }
+
+  switch (sym->class) {
+  case C_GLOBAL:
+    printf(": global");
+    break;
+  case C_LOCAL:
+    printf(": local");
+    break;
+  case C_PARAM:
+    printf(": param");
+    break;
+  case C_EXTERN:
+    printf(": extern");
+    break;
+  case C_STATIC:
+    printf(": static");
+    break;
+  case C_STRUCT:
+    printf(": struct");
+    break;
+  case C_UNION:
+    printf(": union");
+    break;
+  case C_MEMBER:
+    printf(": member");
+    break;
+  case C_ENUMTYPE:
+    printf(": enumtype");
+    break;
+  case C_ENUMVAL:
+    printf(": enumval");
+    break;
+  case C_TYPEDEF:
+    printf(": typedef");
+    break;
+  default:
+    printf(": unknown class");
+  }
+
+  switch (sym->stype) {
+  case S_VARIABLE:
+    if (sym->class == C_ENUMVAL)
+      printf(", value %d\n", sym->st_posn);
+    else
+      printf(", size %d\n", sym->size);
+    break;
+  case S_FUNCTION:
+    printf(", %d params\n", sym->nelems);
+    break;
+  case S_ARRAY:
+    printf(", %d elems, size %d\n", sym->nelems, sym->size);
+    break;
+  }
+
+  switch (sym->type & (~0xf)) {
+  case P_STRUCT:
+  case P_UNION:
+    dumptable(sym->member, NULL, 4);
+  }
+
+  switch (sym->stype) {
+  case S_FUNCTION:
+    dumptable(sym->member, NULL, 4);
+  }
+}
+
+static void dumptable(struct symtable *head, char *name, int indent) {
+  struct symtable *sym;
+
+  if (head != NULL && name != NULL)
+    printf("%s\n--------\n", name);
+
+  for (sym = head; sym != NULL; sym = sym->next)
+    dumpsym(sym, indent);
+}
+
+void dumpsymtables(void) {
+  dumptable(Globhead, "Global", 0);
+  printf("\n");
+  dumptable(Enumhead, "Enums", 0);
+  printf("\n");
+  dumptable(Typehead, "Typedefs", 0);
+}

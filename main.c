@@ -23,6 +23,7 @@ int O_keepasm;
 int O_assemble;
 int O_dolink;
 int O_verbose;
+int O_dumpsym;
 
 static void init() {
   Line = 1;
@@ -102,6 +103,13 @@ static char *do_compile(char *filename) {
   global_declarations();
   genpostamble();
   fclose(Outfile);
+
+  if (O_dumpsym) {
+    printf("Symbols for %s\n", filename);
+    dumpsymtables();
+    fprintf(stdout, "\n\n");
+  }
+
   freestaticsyms();
 
   return Outfilename;
@@ -184,6 +192,9 @@ int main(int argc, char* argv[]) {
           break;
         case 'T':
           O_dumpAST = 1;
+          break;
+        case 'M':
+          O_dumpsym = 1;
           break;
         case 'c':
           O_assemble = 1;

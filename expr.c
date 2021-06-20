@@ -185,7 +185,8 @@ static struct ASTnode *postfix(void) {
 
   // We assume that we have found a variable,
   // so we check for its existence
-  if ((varptr = findsymbol(Text)) == NULL || varptr->stype != S_VARIABLE)
+  if ((varptr = findsymbol(Text)) == NULL || 
+      (varptr->stype != S_VARIABLE && varptr->stype != S_ARRAY))
     fatals("Unknown variable", Text);
 
   switch(Token.token) {

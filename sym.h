@@ -34,3 +34,5 @@ void freeloclsyms(void);
 void copyfuncparams(int slot);
 void clear_symtable(void);
 void freestaticsyms(void);
+
+void dumpsymtables(void);

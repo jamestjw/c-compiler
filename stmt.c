@@ -189,8 +189,12 @@ static struct ASTnode *switch_statement(void) {
         }
 
         match(T_COLON, ":");
-        left = compound_statement(1);
         casecount++;
+
+        if (Token.token == T_CASE)
+          left = NULL;
+        else
+          left = compound_statement(1);
 
         // Build subtree with compound statement as left child
         // and link to the A_CASE tree

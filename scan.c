@@ -196,6 +196,8 @@ static int keyword(char *s) {
         return T_ELSE;
       else if (!strcmp(s, "enum"))
         return T_ENUM;
+      else if (!strcmp(s, "extern"))
+        return T_EXTERN;
       break;
     case 'f':
       if (!strcmp(s, "for"))

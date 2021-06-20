@@ -145,7 +145,8 @@ static int genSWITCH(struct ASTnode *n) {
       casecount++;
 
     // Passing in the end label to allow breaks
-    genAST(c->left, NOLABEL, NOLABEL, Lend, 0);
+    if (c->left)
+      genAST(c->left, NOLABEL, NOLABEL, Lend, 0);
     genfreeregs();
   }
 
@@ -386,6 +387,10 @@ int genAST(struct ASTnode *n, int iflabel,
       return NOREG;
     case A_CAST:
       return leftreg; // Not much to do
+    case A_LOGOR:
+      return cglogor(leftreg, rightreg);
+    case A_LOGAND:
+      return cglogand(leftreg, rightreg);
     default:
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);

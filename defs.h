@@ -47,7 +47,7 @@ enum {
   T_INTLIT, T_STRLIT, T_SEMI, T_IDENT,
   T_LBRACE, T_RBRACE, T_LPAREN, T_RPAREN,
   T_LBRACKET, T_RBRACKET, T_COMMA, T_DOT,
-  T_ARROW, T_COLON,
+  T_ARROW, T_COLON
 };
 
 // AST node types
@@ -62,20 +62,7 @@ enum {
   A_FUNCCALL, A_ADDR, A_DEREF, A_SCALE,
   A_PREINC, A_PREDEC, A_POSTINC, A_POSTDEC,
   A_NEGATE, A_INVERT, A_LOGNOT, A_TOBOOL, A_BREAK,
-  A_CONTINUE, A_SWITCH, A_CASE, A_DEFAULT, A_CAST,
-};
-
-// AST structure
-struct ASTnode {
-  int op;                   // "Operation" to be performed on the tree
-  int type;                 // Type of expression this tree generates
-  int rvalue;               // True if the node should yield a r-value
-  struct ASTnode *left;     // Left, middle and right child trees
-  struct ASTnode *mid;
-  struct ASTnode *right;
-  struct symtable *sym;     // The pointer to the symbol in the symtable
-#define a_intvalue a_size	  // For A_INTLIT, the integer value
-  int a_size;			          // For A_SCALE, the size to scale by
+  A_CONTINUE, A_SWITCH, A_CASE, A_DEFAULT, A_CAST
 };
 
 // Symbol table entry
@@ -99,18 +86,31 @@ struct symtable {
   struct symtable *member;     // First member of a function, struct, union or enum
 };
 
+// AST structure
+struct ASTnode {
+  int op;                   // "Operation" to be performed on the tree
+  int type;                 // Type of expression this tree generates
+  int rvalue;               // True if the node should yield a r-value
+  struct ASTnode *left;     // Left, middle and right child trees
+  struct ASTnode *mid;
+  struct ASTnode *right;
+  struct symtable *sym;     // The pointer to the symbol in the symtable
+#define a_intvalue a_size	  // For A_INTLIT, the integer value
+  int a_size;			          // For A_SCALE, the size to scale by
+};
+
 // Primitive types
 // Lower 4 btes encode the level of indirection,
 // e.g. 0b110000 is an int, whereas 0b110001 is an *int
 // 0b110010 is an **int and so on
 enum {
   P_NONE, P_VOID=16, P_CHAR=32, P_INT=48, P_LONG=64,
-  P_STRUCT=80, P_UNION=96,
+  P_STRUCT=80, P_UNION=96
 };
 
 // Structural types
 enum {
-  S_VARIABLE, S_FUNCTION, S_ARRAY,
+  S_VARIABLE, S_FUNCTION, S_ARRAY
 };
 
 enum {
@@ -124,12 +124,12 @@ enum {
   C_ENUMTYPE,   // A named enumeration type
   C_ENUMVAL,    // A named enumeration value
   C_TYPEDEF,    // A named typedef
-  C_STATIC,
+  C_STATIC
 };
 
 enum {
   NOREG = -1,   // Use NOREG when AST generation functions
                 // have no registers to return
-  NOLABEL = 0,  // Use NOLABEL when we have no label to
+  NOLABEL = 0   // Use NOLABEL when we have no label to
                 // pass to genAST
 };

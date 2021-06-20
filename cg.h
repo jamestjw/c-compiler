@@ -85,3 +85,9 @@ void cgswitch(int reg, int casecount, int toplabel,
               int *caselabel, int *caseval, int defaultlabel);
 int alloc_register(void);
 void cgmove(int r1, int r2);
+// Logically OR two registers and return a
+// register with the result, 1 or 0
+int cglogor(int r1, int r2);
+// Logically AND two registers and return a register with
+// the result, 1 or 0
+int cglogand(int r1, int r2);
