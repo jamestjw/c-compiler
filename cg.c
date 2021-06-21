@@ -481,22 +481,25 @@ int cgcall(struct symtable *sym, int numargs) {
 }
 
 void cgreturn(int reg, struct symtable *sym) {
-  if (ptrtype(sym->type))
-    fprintf(Outfile, "\tmovq\t%s, %%rax\n", reglist[reg]);
-  else {
-    // Move return value to %rax
-    switch (sym->type) {
-      case P_CHAR:
-        fprintf(Outfile, "\tmovzbl\t%s, %%eax\n", breglist[reg]);
-        break;
-      case P_INT:
-        fprintf(Outfile, "\tmovl\t%s, %%eax\n", dreglist[reg]);
-        break;
-      case P_LONG:
-        fprintf(Outfile, "\tmovq\t%s, %%rax\n", reglist[reg]);
-        break;
-      default:
-        fatald("Bad function type in cgreturn", sym->type);
+  // If there is a register containing the return value
+  if (reg != NOREG) {
+    if (ptrtype(sym->type))
+      fprintf(Outfile, "\tmovq\t%s, %%rax\n", reglist[reg]);
+    else {
+      // Move return value to %rax
+      switch (sym->type) {
+        case P_CHAR:
+          fprintf(Outfile, "\tmovzbl\t%s, %%eax\n", breglist[reg]);
+          break;
+        case P_INT:
+          fprintf(Outfile, "\tmovl\t%s, %%eax\n", dreglist[reg]);
+          break;
+        case P_LONG:
+          fprintf(Outfile, "\tmovq\t%s, %%rax\n", reglist[reg]);
+          break;
+        default:
+          fatald("Bad function type in cgreturn", sym->type);
+      }
     }
   }
 
@@ -565,14 +568,18 @@ int cgstorderef(int r1, int r2, int type) {
   return r1;
 }
 
-void cgglobstr(int l, char *strvalue) {
+void cgglobstr(int l, char *strvalue, int append) {
   char *cptr;
-  cglabel(l);
+  if (!append)
+    cglabel(l);
 
   // Loop ends when we hit \0
   for (cptr = strvalue; *cptr; cptr++) {
     fprintf(Outfile, "\t.byte\t%d\n", *cptr);
   }
+}
+
+void cgglobstrend(void) {
   fprintf(Outfile, "\t.byte\t0\n");
 }
 

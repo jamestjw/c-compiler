@@ -60,7 +60,9 @@ int cgshlconst(int r, int val);
 // Store a value through a dereferenced pointer
 int cgstorderef(int r1, int r2, int type);
 // Generate code for a string literal to a given label
-void cgglobstr(int l, char *strvalue);
+void cgglobstr(int l, char *strvalue, int append);
+// Mark the end of string, e.g. null terminate it
+void cgglobstrend(void);
 // Return register containing pointer to a string
 // literal of this ID
 int cgloadglobstr(int label);

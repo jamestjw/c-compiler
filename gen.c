@@ -207,7 +207,9 @@ int genAST(struct ASTnode *n, int iflabel,
     int looptoplabel, int loopendlabel, int parentASTop) {
   // Registers containing the results of evaluating
   // the left and right child nodes
-  int leftreg, rightreg;
+  int leftreg=NOREG, rightreg=NOREG;
+
+  if (n == NULL) return NOREG;
 
   // Handle special cases
   switch (n->op) {
@@ -408,11 +410,15 @@ int genprimsize(int type) {
   return cgprimsize(type);
 }
 
-int genglobstr(char *strvalue) {
+int genglobstr(char *strvalue, int append) {
   int l = genlabel();
-  cgglobstr(l, strvalue);
+  cgglobstr(l, strvalue, append);
   return l;
 };
+
+void genglobstrend(void) {
+  cgglobstrend();
+}
 
 int genalign(int type, int offset, int direction) {
   return cgalign(type, offset, direction);

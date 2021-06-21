@@ -98,22 +98,37 @@ static struct ASTnode *for_statement(void) {
 }
 
 static struct ASTnode *return_statement(void) {
-  struct ASTnode *tree;
-
-  if (Functionid->type == P_VOID)
-    fatal("Can't return from a void function");
+  struct ASTnode *tree = NULL;
 
   match(T_RETURN, "return");
-  lparen();
 
-  tree = binexpr(0);
+  if (Token.token == T_LPAREN) {
+    // Can't return a value if function returns P_VOID
+    if (Functionid->type == P_VOID)
+      fatal("Can't return from a void function");
 
-  tree = modify_type(tree, Functionid->type, Functionid->ctype, 0);
-  if (tree == NULL) fatal("Incompatible return type");
+    // Skip the left parenthesis
+    lparen();
+
+    // Parse the following expression
+    tree = binexpr(0);
+
+    // Ensure this is compatible with the function's type
+    tree = modify_type(tree, Functionid->type, Functionid->ctype, 0);
+    if (tree == NULL)
+      fatal("Incompatible return type");
+
+    // Get the ')'
+    rparen();
+  } else {
+    // Allow the following syntax in void functions
+    // void do_nothing(void) { return; }
+    if (Functionid->type != P_VOID)
+      fatal("Must return a value from a non-void function");
+  }
 
   tree = mkastunary(A_RETURN, P_NONE, NULL, tree, NULL, 0);
 
-  rparen();
   semi();
 
   return tree;
@@ -222,6 +237,10 @@ static struct ASTnode *single_statement(void) {
   struct ASTnode *stmt = NULL;
 
   switch (Token.token) {
+    case T_SEMI:
+      // We allow empty statements
+      semi();
+      break;
     case T_LBRACE:
       lbrace();
       stmt = compound_statement(0);
@@ -276,6 +295,16 @@ struct ASTnode *compound_statement(int inswitch) {
   struct ASTnode *tree;
 
   while (1) {
+    // Accept empty compound statements
+    if (Token.token == T_RBRACE)
+      return left;
+
+    // In switch statements, it is fine to not have braces
+    // around multiline statements
+    if (inswitch && (Token.token == T_CASE || Token.token == T_DEFAULT)) {
+      return left;
+    }
+
     tree = single_statement();
 
     if (tree != NULL) {
@@ -284,15 +313,7 @@ struct ASTnode *compound_statement(int inswitch) {
       else
         left = mkastnode(A_GLUE, P_NONE, NULL, left, NULL, tree, NULL, 0);
     }
-
-    if (Token.token == T_RBRACE) {
-      return left;
-    }
-
-    // In switch statements, it is fine to not have braces
-    // around multiline statements
-    if (inswitch && (Token.token == T_CASE || Token.token == T_DEFAULT)) {
-      return left;
-    }
   }
+  return NULL;
 }
+

@@ -215,7 +215,19 @@ static struct ASTnode *primary(void) {
         n = mkastleaf(A_INTLIT, P_INT, NULL, NULL, Token.intvalue);
       break;
     case T_STRLIT:
-      id = genglobstr(Text);
+      id = genglobstr(Text, 0); // 0 indicates that we should generate a label here
+
+      // To support the following syntax
+      // char *c = "Hello " "world" " !";
+      while (1) {
+        scan(&Peektoken);
+        // Stop looping if there are no more upcoming strlits
+        if (Peektoken.token != T_STRLIT) break;
+        genglobstr(Text, 1);  // 1 indicates that we should not generate a label here
+        scan(&Token);
+      }
+
+      genglobstrend();
       n = mkastleaf(A_STRLIT, pointer_to(P_CHAR), NULL, NULL, id);
       break;
     case T_IDENT:

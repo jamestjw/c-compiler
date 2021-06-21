@@ -17,6 +17,36 @@ int Switchlevel;
 int parse_type(struct symtable **ctype, int *class);
 static int param_declaration_list(struct symtable *oldfuncsym, struct symtable *newfuncsym);
 
+// Given a symtable entry that may already exist, return true if the symbol
+// doesn't exist. We use this function to convert externs into globals
+int is_new_symbol(struct symtable *sym, int class, int type, struct symtable *ctype) {
+  // If no existing symbol, then it must be new
+  if (sym == NULL) return 1;
+
+  // We allow previously defined extern symbols to now be declared
+  // as global and vice versa
+  if (((sym->class == C_GLOBAL) && class == C_EXTERN) ||
+      (sym->class == C_EXTERN && class == C_GLOBAL)) {
+    // Verify that the types match
+    if (type != sym->type)
+      fatals("Type mismatch between global/extern", sym->name);
+
+    // Verify ctype for structs and unions
+    if (type >= P_STRUCT && ctype != sym->ctype)
+      fatals("Type mismatch between global/extern", sym->name);
+
+    // If we get here, everything matches up perfectly, so
+    // we mark the symbol as global
+    sym->class = C_GLOBAL;
+
+    return 0;
+  }
+
+  fatals("Duplicate global variable declaration", sym->name);
+  // -Wall
+  return -1;
+}
+
 // When this function is called, the current token
 // should be T_STRUCT
 static struct symtable *composite_declaration(int type) {
@@ -423,7 +453,9 @@ static struct symtable *array_declaration(char *varname, int type,
     case C_EXTERN:
     case C_GLOBAL:
     case C_STATIC:
-      sym = addglob(varname, pointer_to(type), ctype, S_ARRAY, class, 0, 0);
+      sym= findglob(varname);
+      if (is_new_symbol(sym, class, pointer_to(type), ctype))
+        sym = addglob(varname, pointer_to(type), ctype, S_ARRAY, class, 0, 0);
       break;
     case C_LOCAL:
     case C_PARAM:
@@ -499,7 +531,9 @@ static struct symtable *scalar_declaration(char *varname, int type,
     case C_EXTERN:
     case C_GLOBAL:
     case C_STATIC:
-      sym = addglob(varname, type, ctype, S_VARIABLE, class, 1, 0);
+      sym = findglob(varname);
+      if (is_new_symbol(sym, class, type, ctype))
+        sym = addglob(varname, type, ctype, S_VARIABLE, class, 1, 0);
       break;
     case C_LOCAL:
       sym = addlocl(varname, type, ctype, S_VARIABLE, 1);
@@ -602,8 +636,6 @@ static struct symtable *symbol_declaration(int type, struct symtable *ctype, int
     case C_EXTERN:
     case C_GLOBAL:
     case C_STATIC:
-      if (findglob(varname) != NULL)
-        fatals("Duplicate global variable declaration", varname);
     case C_LOCAL:
     case C_PARAM:
       if (findlocl(varname) != NULL)
