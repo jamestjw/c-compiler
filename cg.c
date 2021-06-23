@@ -40,6 +40,11 @@ static char *invcmplist[] = { "jne", "je", "jge", "jle", "jg", "jl" };
 static int localOffset;
 static int stackOffset;
 
+// Next register to spill on the stack
+// When this value is 0, it means that
+// we have no spilled registers.
+static int spillreg = 0;
+
 void cgtextseg() {
   if (currSeg != text_seg) {
     fputs("\t.text\n", Outfile);
@@ -64,27 +69,70 @@ void freeall_registers(int keepreg) {
   }
 }
 
+// Push a register to the stack
+static void pushreg(int r) {
+  fprintf(Outfile, "\tpushq\t%s\n", reglist[r]);
+}
+
+// Pop a register off the stack
+static void popreg(int r) {
+  fprintf(Outfile, "\tpopq\t%s\n", reglist[r]);
+}
+
 // Allocate a free register and returns the corresponding
 // identifier. Program exits if no available registers remain.
 int alloc_register(void) {
-  for (int i = 0; i < 4; ++i) {
-    if (freereg[i]) {
-      freereg[i] = 0;
-      return i;
+  int reg;
+
+  for (reg = 0; reg < NUMFREEREGS; reg++) {
+    if (freereg[reg]) {
+      freereg[reg] = 0;
+      return reg;
     }
   }
 
-  fprintf(stderr, "Out of free registers!\n");
-  exit(1);
+  // Since we've no available registers, we spill one
+  reg = (spillreg % NUMFREEREGS);
+  spillreg++;
+  // TODO: Remove debug statement
+  fprintf(Outfile, "# spilling reg %d\n", reg);
+  pushreg(reg);
+  return reg;
 }
 
 // Frees up a previously allocated register.
 static void free_register(int reg) {
   if (freereg[reg] != 0) {
-    fprintf(stderr, "Error trying to free register %d\n", reg);
-    exit(1);
+    fprintf(Outfile, "# error trying to free register %d\n", reg);
+    fatald("Error trying to free register", reg);
   }
-  freereg[reg] = 1;
+
+  // If there was a spilled register
+  // Note: We always reload the most recently-spilled register
+  if (spillreg > 0) {
+    spillreg--;
+    reg = (spillreg % NUMFREEREGS);
+    fprintf(Outfile, "# unspilling reg %d\n", reg);
+    popreg(reg);
+  } else {
+    freereg[reg] = 1;
+  }
+}
+
+// Spill all registers on the stack
+void spill_all_regs(void) {
+  int i;
+
+  for (i = 0; i < NUMFREEREGS; i++) {
+    pushreg(i);
+  }
+}
+
+static void unspill_all_regs(void) {
+  int i;
+
+  for (i = NUMFREEREGS-1; i >= 0; i--)
+    popreg(i);
 }
 
 static int newlocaloffset(int type) {
@@ -198,20 +246,20 @@ int cgloadint(int value, int type) {
 // while freeing the other.
 int cgadd(int r1, int r2) {
   // e.g. addq %r8, %r9
-  fprintf(Outfile, "\taddq\t%s, %s\n", reglist[r1], reglist[r2]);
-  free_register(r1);
+  fprintf(Outfile, "\taddq\t%s, %s\n", reglist[r2], reglist[r1]);
+  free_register(r2);
 
-  return r2;
+  return r1;
 }
 
 // Multiplies two registers and saves the result in one of them
 // while freeing the other.
 int cgmul(int r1, int r2) {
   // e.g. imulq %r8, %r9
-  fprintf(Outfile, "\timulq\t%s, %s\n", reglist[r1], reglist[r2]);
-  free_register(r1);
+  fprintf(Outfile, "\timulq\t%s, %s\n", reglist[r2], reglist[r1]);
+  free_register(r2);
 
-  return r2;
+  return r1;
 }
 
 // Subtracts the second register from the first and returns
@@ -463,7 +511,7 @@ int cgprimsize(int type) {
 }
 
 int cgcall(struct symtable *sym, int numargs) {
-  int outr = alloc_register();
+  int outr;
 
   // call funcname
   fprintf(Outfile, "\tcall\t%s@PLT\n", sym->name);
@@ -473,6 +521,9 @@ int cgcall(struct symtable *sym, int numargs) {
     // addq $16, %rsp
     fprintf(Outfile, "\taddq\t$%d, %%rsp\n", 8 * (numargs - 6));
 
+  unspill_all_regs();
+ 
+  outr = alloc_register(); 
   // Move return code from %rax
   // movq %rax, %r9
   fprintf(Outfile, "\tmovq\t%%rax, %s\n", reglist[outr]);
@@ -528,11 +579,10 @@ int cgderef(int r, int type) {
       // movzbq (%r10), r10
       fprintf(Outfile, "\tmovzbq\t(%s), %s\n", reglist[r], reglist[r]);
       break;
-    case 2:
-      // movzwq (%r10), r10
-      fprintf(Outfile, "\tmovzwq\t(%s), %s\n", reglist[r], reglist[r]);
-      break;
     case 4:
+      // movslq (%r10), r10
+      fprintf(Outfile, "\tmovslq\t(%s), %s\n", reglist[r], reglist[r]);
+      break;
     case 8:
       // movq (%r10), r10
       fprintf(Outfile, "\tmovq\t(%s), %s\n", reglist[r], reglist[r]);
@@ -592,23 +642,23 @@ int cgloadglobstr(int label) {
 
 int cgand(int r1, int r2) {
   // andq %r9, %r10
-  fprintf(Outfile, "\tandq\t%s, %s\n", reglist[r1], reglist[r2]);
-  free_register(r1);
-  return r2;
+  fprintf(Outfile, "\tandq\t%s, %s\n", reglist[r2], reglist[r1]);
+  free_register(r2);
+  return r1;
 }
 
 int cgor(int r1, int r2) {
   // orq %r9, %r10
-  fprintf(Outfile, "\torq\t%s, %s\n", reglist[r1], reglist[r2]);
-  free_register(r1);
-  return r2;
+  fprintf(Outfile, "\torq\t%s, %s\n", reglist[r2], reglist[r1]);
+  free_register(r2);
+  return r1;
 }
 
 int cgxor(int r1, int r2) {
   // xorq %r9, %r10
-  fprintf(Outfile, "\txorq\t%s, %s\n", reglist[r1], reglist[r2]);
-  free_register(r1);
-  return r2;
+  fprintf(Outfile, "\txorq\t%s, %s\n", reglist[r2], reglist[r1]);
+  free_register(r2);
+  return r1;
 }
 
 // Negate a register's value
@@ -662,15 +712,21 @@ int cglognot(int r) {
 
 int cgboolean(int r, int op, int label) {
   fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r], reglist[r]);
-  if (op == A_IF || op == A_WHILE)
-    // je L2
-    fprintf(Outfile, "\tje\tL%d\n", label);
-  else {
-    // Set if test is not-zero
-    // setnz %r9b
-    // movzbq %r9b, %r9
-    fprintf(Outfile, "\tsetnz\t%s\n", breglist[r]);
-    fprintf(Outfile, "\tmovzbq\t%s, %s\n", breglist[r], reglist[r]);
+  switch(op) {
+    case A_IF:
+    case A_WHILE:
+    case A_LOGAND:
+      fprintf(Outfile, "\tje\tL%d\n", label);
+      break;
+    case A_LOGOR:
+      fprintf(Outfile, "\tjne\tL%d\n", label);
+      break;
+    default:
+      // Set if test is not-zero
+      // setnz %r9b
+      // movzbq %r9b, %r9
+      fprintf(Outfile, "\tsetnz\t%s\n", breglist[r]);
+      fprintf(Outfile, "\tmovzbq\t%s, %s\n", breglist[r], reglist[r]);
   }
 
   return r;
@@ -758,6 +814,7 @@ void cgcopyarg(int r, int argposn) {
     // movq %r10, %rdi
     fprintf(Outfile, "\tmovq\t%s, %s\n", reglist[r], reglist[FIRSTPARAMREG - argposn + 1]);
   }
+  free_register(r);
 }
 
 // Given a scalar type, an existing memory offset (which
@@ -824,53 +881,6 @@ void cgmove(int r1, int r2) {
   fprintf(Outfile, "\tmovq\t%s, %s\n", reglist[r1], reglist[r2]);
 }
 
-int cglogor(int r1, int r2) {
-  // Generate two labels
-  int Ltrue = genlabel();
-  int Lend = genlabel();
-
-  //           test    %r10, %r10              # Test x's boolean value
-  //           jne     L13                     # True, jump to L13
-  //           test    %r11, %r11              # Test y's boolean value
-  //           jne     L13                     # True, jump to L13
-  //           movq    $0, %r10                # Neither true, set %r10 to false
-  //           jmp     L14                     # and jump to L14
-  //   L13:
-  //           movq    $1, %r10                # Set %r10 to true
-  //   L14:
-  //           movl    %r10d, z(%rip)          # Save boolean result to z
-
-  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r1], reglist[r1]);
-  fprintf(Outfile, "\tjne\tL%d\n", Ltrue);  // jump if not equal to zero
-  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r2], reglist[r2]);
-  fprintf(Outfile, "\tjne\tL%d\n", Ltrue);
-
-  fprintf(Outfile, "\tmovq\t$0, %s\n", reglist[r1]);
-  fprintf(Outfile, "\tjmp\tL%d\n", Lend);
-  cglabel(Ltrue);
-  fprintf(Outfile, "\tmovq\t$1, %s\n", reglist[r1]);
-  cglabel(Lend);
-  free_register(r2);
-  return r1;
-}
-
-int cglogand(int r1, int r2) {
-  int Lfalse = genlabel();
-  int Lend = genlabel();
-
-  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r1], reglist[r1]);
-  fprintf(Outfile, "\tje\tL%d\n", Lfalse);
-
-  fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r2], reglist[r2]);
-  fprintf(Outfile, "\tje\tL%d\n", Lfalse);
-
-  fprintf(Outfile, "\tmovq\t$1, %s\n", reglist[r1]);
-  fprintf(Outfile, "\tjmp\tL%d\n", Lend);
-
-  cglabel(Lfalse);
-  fprintf(Outfile, "\tmovq\t$0, %s\n", reglist[r1]);
-  cglabel(Lend);
-  free_register(r2);
-
-  return r1;
+void cgloadboolean(int r, int val) {
+  fprintf(Outfile, "\tmovq\t$%d, %s\n", val, reglist[r]);
 }

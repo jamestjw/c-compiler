@@ -93,3 +93,5 @@ int cglogor(int r1, int r2);
 // Logically AND two registers and return a register with
 // the result, 1 or 0
 int cglogand(int r1, int r2);
+void cgloadboolean(int r, int val);
+void spill_all_regs(void);

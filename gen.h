@@ -1,6 +1,6 @@
 void genpreamble();
 void genpostamble();
-void genfreeregs();
+void genfreeregs(int keepreg);
 void genprintint(int reg);
 // Generate code for global symbol declaration
 void genglobsym(struct symtable *node);
