@@ -308,7 +308,9 @@ int genAST(struct ASTnode *n, int iflabel,
       // Load the value if it is an r-value
       // or if it is a dereference.
       if (n->rvalue || parentASTop == A_DEREF) {
-        if (n->sym->class == C_GLOBAL || n->sym->class == C_STATIC) {
+        if (n->sym->class == C_GLOBAL || 
+            n->sym->class == C_STATIC ||
+            n->sym->class == C_EXTERN) {
           return cgloadglob(n->sym, n->op);
         } else {
           return cgloadlocal(n->sym, n->op);

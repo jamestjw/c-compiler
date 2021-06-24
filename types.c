@@ -130,7 +130,8 @@ struct ASTnode *modify_type(struct ASTnode *tree, int rtype,
   }
 
   // We can scale on A_ADD or A_SUBTRACT operations
-  if (op == A_ADD || op == A_SUBTRACT) {
+  if (op == A_ADD || op == A_SUBTRACT ||
+      op == A_ASPLUS || op == A_ASMINUS) {
     // Left is int type and right is ptr type
     if (inttype(ltype) && ptrtype(rtype)) {
       rsize = genprimsize(value_at(rtype));
