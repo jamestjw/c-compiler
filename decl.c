@@ -458,9 +458,10 @@ static struct symtable *array_declaration(char *varname, int type,
         sym = addglob(varname, pointer_to(type), ctype, S_ARRAY, class, 0, 0);
       break;
     case C_LOCAL:
-    case C_PARAM:
-    case C_MEMBER:
-      fatal("For now, declaration of non-global arrays is not supported");
+      sym = addlocl(varname, pointer_to(type), ctype, S_ARRAY, 0);
+      break;
+    default:
+      fatal("Declaration of array paremeters is not implemented");
   }
 
   if (Token.token == T_ASSIGN) {
@@ -512,6 +513,9 @@ static struct symtable *array_declaration(char *varname, int type,
       nelems = i;
     sym->initlist = initlist;
   }
+
+  if (class != C_EXTERN && nelems <= 0)
+    fatals("Array must have non-zero elements", sym->name);
 
   sym->nelems = nelems;
   sym->size = sym->nelems * typesize(type, ctype);

@@ -7,6 +7,10 @@
 # define NULL (void *)0
 #endif
 
+#ifndef EOF
+# define EOF (-1)
+#endif
+
 // This FILE definition will do for now
 typedef char * FILE;
 

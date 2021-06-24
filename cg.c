@@ -135,9 +135,9 @@ static void unspill_all_regs(void) {
     popreg(i);
 }
 
-static int newlocaloffset(int type) {
+static int newlocaloffset(int size) {
   // Decrement by a minimum of 4 bytes
-  localOffset += (cgprimsize(type) > 4) ? cgprimsize(type) : 4;
+  localOffset += (size > 4) ? size : 4;
   return -localOffset;
 }
 
@@ -200,7 +200,7 @@ void cgfuncpreamble(struct symtable *sym) {
       parm->st_posn = paramOffset;
       paramOffset += 8;
     } else {
-      parm->st_posn = newlocaloffset(parm->type);
+      parm->st_posn = newlocaloffset(parm->size);
       cgstorlocal(paramReg--, parm);
     }
   }
@@ -208,7 +208,7 @@ void cgfuncpreamble(struct symtable *sym) {
   // For locals, we shall create a new
   // stack position.
   for (locvar = Loclhead; locvar != NULL; locvar = locvar->next) {
-    locvar->st_posn = newlocaloffset(locvar->type);
+    locvar->st_posn = newlocaloffset(locvar->size);
   }
 
   // Align stack pointer to be a multiple of 16
@@ -606,8 +606,9 @@ int cgstorderef(int r1, int r2, int type) {
     case 1:
       fprintf(Outfile, "\tmovb\t%s, (%s)\n", breglist[r1], reglist[r2]);
       break;
-    case 2:
     case 4:
+      fprintf(Outfile, "\tmovl\t%s, (%s)\n", dreglist[r1], reglist[r2]);
+      break;
     case 8:
       fprintf(Outfile, "\tmovq\t%s, (%s)\n", reglist[r1], reglist[r2]);
       break;
