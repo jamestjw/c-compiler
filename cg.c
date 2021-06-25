@@ -274,7 +274,7 @@ int cgsub(int r1, int r2) {
 
 // Divide first register by the second and returns the
 // register containing the result while freeing the other.
-int cgdiv(int r1, int r2) {
+int cgdivmod(int r1, int r2, int op) {
   // Move dividend to %rax
   // e.g. movq %r1, %rax
   fprintf(Outfile, "\tmovq\t%s, %%rax\n", reglist[r1]);
@@ -288,9 +288,13 @@ int cgdiv(int r1, int r2) {
   // e.g. idivq %r2
   fprintf(Outfile, "\tidivq\t%s\n", reglist[r2]);
 
-  // Move result from %rax to %r1
-  // e.g. movq %rax, %r1
-  fprintf(Outfile, "\tmovq\t%%rax, %s\n", reglist[r1]);
+  if (op == A_DIVIDE)
+    // Move result from %rax to %r1
+    // e.g. movq %rax, %r1
+    fprintf(Outfile, "\tmovq\t%%rax, %s\n", reglist[r1]);
+  else
+    fprintf(Outfile, "\tmovq\t%%rdx,%s\n", reglist[r1]);
+
   free_register(r2);
 
   return r1;
@@ -303,72 +307,6 @@ void cgprintint(int r) {
   fprintf(Outfile, "\tmovq\t%s, %%rdi\n", reglist[r]);
   fprintf(Outfile, "\tcall\tprintint\n");
   free_register(r);
-}
-
-int cgloadglob(struct symtable *sym, int op) {
-  char *name = sym->name;
-  int r = alloc_register();
-
-  switch (cgprimsize(sym->type)) {
-    case 1:
-      if (op == A_PREINC)
-        // incb identifier(%rip)
-        fprintf(Outfile, "\tincb\t%s(\%%rip)\n", name);
-      if (op == A_PREDEC)
-        // decb identifier(%rip)
-        fprintf(Outfile, "\tdecb\t%s(\%%rip)\n", name);
-      // e.g. movzbq identifier(%rip), %r8
-
-      fprintf(Outfile, "\tmovzbq\t%s(\%%rip), %s\n", name, reglist[r]);
-
-      if (op == A_POSTINC)
-        // incb identifier(%rip)
-        fprintf(Outfile, "\tincb\t%s(\%%rip)\n", name);
-      if (op == A_POSTDEC)
-        // decb identifier(%rip)
-        fprintf(Outfile, "\tdecb\t%s(\%%rip)\n", name);
-      break;
-    case 4:
-      if (op == A_PREINC)
-        // incl identifier(%rip)
-        fprintf(Outfile, "\tincl\t%s(\%%rip)\n", name);
-      if (op == A_PREDEC)
-        // decl identifier(%rip)
-        fprintf(Outfile, "\tdecl\t%s(\%%rip)\n", name);
-      // e.g. movzbl identifier(%rip), %r8
-
-      fprintf(Outfile, "\tmovslq\t%s(\%%rip), %s\n", name, reglist[r]);
-
-      if (op == A_POSTINC)
-        // incl identifier(%rip)
-        fprintf(Outfile, "\tincl\t%s(\%%rip)\n", name);
-      if (op == A_POSTDEC)
-        // decl identifier(%rip)
-        fprintf(Outfile, "\tdecl\t%s(\%%rip)\n", name);
-      break;
-    case 8:
-      if (op == A_PREINC)
-        // incq identifier(%rip)
-        fprintf(Outfile, "\tincq\t%s(\%%rip)\n", name);
-      if (op == A_PREDEC)
-        // decq identifier(%rip)
-        fprintf(Outfile, "\tdecq\t%s(\%%rip)\n", name);
-      // e.g. movq identifier(%rip), %r8
-
-      fprintf(Outfile, "\tmovq\t%s(\%%rip), %s\n", name, reglist[r]);
-
-      if (op == A_POSTINC)
-        // incq identifier(%rip)
-        fprintf(Outfile, "\tincq\t%s(\%%rip)\n", name);
-      if (op == A_POSTDEC)
-        // decq identifier(%rip)
-        fprintf(Outfile, "\tdecq\t%s(\%%rip)\n", name);
-      break;
-    default:
-      fatald("Bad type in cgloadglob", sym->type);
-  }
-
-  return r;
 }
 
 int cgstorglob(int r, struct symtable *sym) {
@@ -733,57 +671,6 @@ int cgboolean(int r, int op, int label) {
   return r;
 }
 
-int cgloadlocal(struct symtable *sym, int op) {
-  // Get a new register
-  int r = alloc_register();
-
-  // Print out the code to initialise it
-  switch (cgprimsize(sym->type)) {
-    case 1:
-      if (op == A_PREINC)
-	      fprintf(Outfile, "\tincb\t%d(%%rbp)\n", sym->st_posn);
-      if (op == A_PREDEC)
-	      fprintf(Outfile, "\tdecb\t%d(%%rbp)\n", sym->st_posn);
-
-      fprintf(Outfile, "\tmovzbq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]);
-
-      if (op == A_POSTINC)
-	      fprintf(Outfile, "\tincb\t%d(%%rbp)\n", sym->st_posn);
-      if (op == A_POSTDEC)
-	      fprintf(Outfile, "\tdecb\t%d(%%rbp)\n", sym->st_posn);
-      break;
-    case 4:
-      if (op == A_PREINC)
-	      fprintf(Outfile, "\tincl\t%d(%%rbp)\n", sym->st_posn);
-      if (op == A_PREDEC)
-	      fprintf(Outfile, "\tdecl\t%d(%%rbp)\n", sym->st_posn);
-
-      fprintf(Outfile, "\tmovslq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]);
-
-      if (op == A_POSTINC)
-	      fprintf(Outfile, "\tincl\t%d(%%rbp)\n", sym->st_posn);
-      if (op == A_POSTDEC)
-	      fprintf(Outfile, "\tdecl\t%d(%%rbp)\n", sym->st_posn);
-      break;
-    case 8:
-      if (op == A_PREINC)
-	      fprintf(Outfile, "\tincq\t%d(%%rbp)\n", sym->st_posn);
-      if (op == A_PREDEC)
-	      fprintf(Outfile, "\tdecq\t%d(%%rbp)\n", sym->st_posn);
-
-      fprintf(Outfile, "\tmovq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]);
-
-      if (op == A_POSTINC)
-	      fprintf(Outfile, "\tincq\t%d(%%rbp)\n", sym->st_posn);
-      if (op == A_POSTDEC)
-	      fprintf(Outfile, "\tdecq\t%d(%%rbp)\n", sym->st_posn);
-      break;
-    default:
-      fatald("Bad type in cgloadlocal:", sym->type);
-  }
-  return r;
-}
-
 int cgstorlocal(int r, struct symtable *sym) {
   switch (cgprimsize(sym->type)) {
     case 1:
@@ -884,4 +771,86 @@ void cgmove(int r1, int r2) {
 
 void cgloadboolean(int r, int val) {
   fprintf(Outfile, "\tmovq\t$%d, %s\n", val, reglist[r]);
+}
+
+int cgloadvar(struct symtable *sym, int op) {
+  int r, postreg, offset = 1;
+  r = alloc_register();
+
+  // If the symbol is a ptr, use the size of the
+  // type it points to as any increment or
+  // decrement. If not, it's one.
+  if (ptrtype(sym->type))
+    offset = typesize(value_at(sym->type), sym->ctype);
+
+  // Negate offset for decrements
+  if (op == A_PREDEC || op == A_POSTDEC)
+    offset = -offset; 
+
+  // If we have a pre-op
+  if (op == A_PREINC || op == A_PREDEC) {
+    // Load the symbol's address
+    if (sym->class == C_LOCAL || sym->class == C_PARAM)
+      fprintf(Outfile, "\tleaq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]);
+    else
+      fprintf(Outfile, "\tleaq\t%s(%%rip), %s\n", sym->name, reglist[r]);
+
+    // Modify the value at the address by that much
+    switch (sym->size) {
+      case 1:
+        fprintf(Outfile, "\taddb\t$%d,(%s)\n", offset, reglist[r]); 
+        break;
+      case 4:
+        fprintf(Outfile, "\taddl\t$%d,(%s)\n", offset, reglist[r]); 
+        break;
+      case 8:
+        fprintf(Outfile, "\taddq\t$%d,(%s)\n", offset, reglist[r]); 
+        break;
+    }
+  }
+
+  if (sym->class == C_LOCAL || sym->class == C_PARAM) {
+      switch (sym->size) {
+        case 1: 
+          fprintf(Outfile, "\tmovzbq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]); 
+          break;
+        case 4: 
+          fprintf(Outfile, "\tmovslq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]); 
+          break;
+        case 8: 
+          fprintf(Outfile, "\tmovq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]);
+    }
+  } else {
+    switch (sym->size) {
+      case 1: 
+        fprintf(Outfile, "\tmovzbq\t%s(%%rip), %s\n", sym->name, reglist[r]); break;
+      case 4: 
+        fprintf(Outfile, "\tmovslq\t%s(%%rip), %s\n", sym->name, reglist[r]); break;
+      case 8: 
+        fprintf(Outfile, "\tmovq\t%s(%%rip), %s\n", sym->name, reglist[r]);      
+    }
+  }
+
+  // If we have a post-operation, get a new register
+  if (op==A_POSTINC || op==A_POSTDEC) {
+    postreg = alloc_register();
+
+    // Load the symbol's address
+    if (sym->class == C_LOCAL || sym->class == C_PARAM)
+      fprintf(Outfile, "\tleaq\t%d(%%rbp), %s\n", sym->st_posn, reglist[postreg]);
+    else
+      fprintf(Outfile, "\tleaq\t%s(%%rip), %s\n", sym->name, reglist[postreg]);
+    // and change the value at that address
+
+    switch (sym->size) {
+      case 1: fprintf(Outfile, "\taddb\t$%d,(%s)\n", offset, reglist[postreg]); break;
+      case 4: fprintf(Outfile, "\taddl\t$%d,(%s)\n", offset, reglist[postreg]); break;
+      case 8: fprintf(Outfile, "\taddq\t$%d,(%s)\n", offset, reglist[postreg]); break;
+    }
+    // and free the register
+    free_register(postreg);
+  }
+
+  // Return the register with the value
+  return r;
 }

@@ -215,7 +215,7 @@ int cgsub(int r1, int r2) {
 
 // Divide first register by the second and returns the
 // register containing the result while freeing the other.
-int cgdiv(int r1, int r2) {
+int cgdivmod(int r1, int r2) {
   // Place dividend in r0, and divisor in r1
 
   // mov r0, r4

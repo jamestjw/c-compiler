@@ -5,7 +5,6 @@
 #include "incdir.h"
 
 #define TEXTLEN 512
-#define NSYMBOLS 1024   // Num of entries in the symbol table
 
 #define AOUT "a.out"
 #define ASCMD "as -o"
@@ -24,13 +23,13 @@ enum {
 
   // Binary operators
   T_ASSIGN, T_ASPLUS, T_ASMINUS,
-  T_ASSTAR, T_ASSLASH,
+  T_ASSTAR, T_ASSLASH, T_ASMOD,
   T_QUESTION, T_LOGOR, T_LOGAND,
   T_OR, T_XOR, T_AMPER,
   T_EQ, T_NE,
   T_LT, T_GT, T_LE, T_GE,
   T_LSHIFT, T_RSHIFT,
-  T_PLUS, T_MINUS, T_STAR, T_SLASH,
+  T_PLUS, T_MINUS, T_STAR, T_SLASH, T_MOD,
 
   // Other operators
   T_INC, T_DEC, T_INVERT, T_LOGNOT,
@@ -54,16 +53,17 @@ enum {
 // AST node types
 // Binary operators line up exactly with token types
 enum {
-  A_ASSIGN=1, A_ASPLUS, A_ASMINUS, A_ASSTAR, A_ASSLASH,
-  A_TERNARY, A_LOGOR, A_LOGAND, A_OR, A_XOR, A_AND,
-  A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE, A_LSHIFT, A_RSHIFT,
-  A_ADD, A_SUBTRACT, A_MULTIPLY, A_DIVIDE,
-  A_INTLIT, A_STRLIT, A_IDENT, A_GLUE,
-  A_IF, A_WHILE, A_FUNCTION, A_WIDEN, A_RETURN,
-  A_FUNCCALL, A_ADDR, A_DEREF, A_SCALE,
-  A_PREINC, A_PREDEC, A_POSTINC, A_POSTDEC,
-  A_NEGATE, A_INVERT, A_LOGNOT, A_TOBOOL, A_BREAK,
-  A_CONTINUE, A_SWITCH, A_CASE, A_DEFAULT, A_CAST
+    A_ASSIGN = 1, A_ASPLUS, A_ASMINUS, A_ASSTAR,			//  1
+    A_ASSLASH, A_ASMOD, A_TERNARY, A_LOGOR,			//  5
+    A_LOGAND, A_OR, A_XOR, A_AND, A_EQ, A_NE, A_LT,		//  9
+    A_GT, A_LE, A_GE, A_LSHIFT, A_RSHIFT,				// 16
+    A_ADD, A_SUBTRACT, A_MULTIPLY, A_DIVIDE, A_MOD,		// 21
+    A_INTLIT, A_STRLIT, A_IDENT, A_GLUE,				// 26
+    A_IF, A_WHILE, A_FUNCTION, A_WIDEN, A_RETURN,			// 30
+    A_FUNCCALL, A_DEREF, A_ADDR, A_SCALE,				// 35
+    A_PREINC, A_PREDEC, A_POSTINC, A_POSTDEC,			// 39
+    A_NEGATE, A_INVERT, A_LOGNOT, A_TOBOOL, A_BREAK,		// 43
+    A_CONTINUE, A_SWITCH, A_CASE, A_DEFAULT, A_CAST		// 48
 };
 
 // Symbol table entry

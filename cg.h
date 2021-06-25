@@ -8,11 +8,7 @@ int cgloadint(int value, int type);
 int cgadd(int r1, int r2);
 int cgsub(int r1, int r2);
 int cgmul(int r1, int r2);
-int cgdiv(int r1, int r2);
-// Load a value from a global symbol. If the
-// operation is a pre/post-increment, also
-// perform this action
-int cgloadglob(struct symtable *sym, int op);
+int cgdivmod(int r1, int r2, int op);
 // Load a value to a global symbol
 int cgstorglob(int r, struct symtable *sym);
 
@@ -77,8 +73,7 @@ int cglognot(int r);
 int cgboolean(int r, int op, int label);
 // Reset offset of local variables when parsing a new function
 void cgresetlocals(void);
-// Get the position of the next local variable
-int cgloadlocal(struct symtable *sym, int op);
+int cgloadvar(struct symtable *sym, int op);
 // Store a register's value into a local variable
 int cgstorlocal(int r, struct symtable *sym);
 void cgcopyarg(int r, int argposn);

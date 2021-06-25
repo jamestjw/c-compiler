@@ -47,10 +47,7 @@ static int genIF(struct ASTnode *n, int looptoplabel, int loopendlabel) {
   // Optional ELSE:
   // Generate the false statement and the end label
   if (n->right) {
-    // TODO: Verify that we dont need to pass labels here,
-    // since break can be called from the else clause too?
-    // Check this when solving the dangling else problem
-    genAST(n->right, NOLABEL, NOLABEL, NOLABEL, n->op);
+    genAST(n->right, NOLABEL, NOLABEL, loopendlabel, n->op);
     genfreeregs(NOREG);
     cglabel(Lend);
   }
@@ -288,7 +285,9 @@ int genAST(struct ASTnode *n, int iflabel,
     case A_MULTIPLY:
       return cgmul(leftreg, rightreg);
     case A_DIVIDE:
-      return cgdiv(leftreg, rightreg);
+      return cgdivmod(leftreg, rightreg, A_DIVIDE);
+    case A_MOD:
+      return (cgdivmod(leftreg, rightreg, A_MOD));
     case A_EQ:
     case A_NE:
     case A_LT:
@@ -308,13 +307,7 @@ int genAST(struct ASTnode *n, int iflabel,
       // Load the value if it is an r-value
       // or if it is a dereference.
       if (n->rvalue || parentASTop == A_DEREF) {
-        if (n->sym->class == C_GLOBAL || 
-            n->sym->class == C_STATIC ||
-            n->sym->class == C_EXTERN) {
-          return cgloadglob(n->sym, n->op);
-        } else {
-          return cgloadlocal(n->sym, n->op);
-        }
+        return cgloadvar(n->sym, n->op);
       } else {
         return NOREG;
       }
@@ -323,6 +316,7 @@ int genAST(struct ASTnode *n, int iflabel,
     case A_ASMINUS:
     case A_ASSTAR:
     case A_ASSLASH:
+    case A_ASMOD:
       // For '+=' and friends, generate suitable code and
       // get the register with the result. Then take the
       // left child and make it the right child so that
@@ -341,7 +335,11 @@ int genAST(struct ASTnode *n, int iflabel,
           n->right = n->left;
           break;
         case A_ASSLASH:
-          leftreg = cgdiv(leftreg, rightreg);
+          leftreg = cgdivmod(leftreg, rightreg, A_DIVIDE);
+          n->right = n->left;
+          break;
+        case A_ASMOD:
+          leftreg = cgdivmod(leftreg, rightreg, A_MOD);
           n->right = n->left;
           break;
       }
@@ -405,16 +403,10 @@ int genAST(struct ASTnode *n, int iflabel,
       return cgshr(leftreg, rightreg);
     case A_POSTINC:
     case A_POSTDEC:
-      if (n->sym->class == C_GLOBAL || n->sym->class == C_STATIC)
-        return (cgloadglob(n->sym, n->op));
-      else
-        return (cgloadlocal(n->sym, n->op));
+      return cgloadvar(n->sym, n->op);
     case A_PREINC:
     case A_PREDEC:
-      if (n->left->sym->class == C_GLOBAL || n->left->sym->class == C_STATIC)
-        return (cgloadglob(n->left->sym, n->op));
-      else
-        return (cgloadlocal(n->left->sym, n->op));
+      return cgloadvar(n->left->sym, n->op);
     case A_NEGATE:
       return cgnegate(leftreg);
     case A_INVERT:

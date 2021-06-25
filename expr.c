@@ -15,23 +15,24 @@ struct token Peektoken;    // A look-ahead token
 // Operator precedence for each token
 // A bigger number indicates a higher precedence
 static int OpPrec[] = {
-  0, 10, 10,        // T_EOF, T_ASSIGN, T_ASPLUS,
-  10, 10, 10,       // T_ASMINUS, T_ASSTAR, T_ASSLASH,
-  15,               // T_QUESTION
-  20, 30,		        // T_LOGOR, T_LOGAND
-  40, 50, 60,			  // T_OR, T_XOR, T_AMPER
-  70, 70,			      // T_EQ, T_NE
-  80, 80, 80, 80,		// T_LT, T_GT, T_LE, T_GE
-  90, 90,			      // T_LSHIFT, T_RSHIFT
-  100, 100,			    // T_PLUS, T_MINUS
-  110, 110			    // T_STAR, T_SLASH
+  0, 10, 10,			// T_EOF, T_ASSIGN, T_ASPLUS,
+  10, 10,			    // T_ASMINUS, T_ASSTAR,
+  10, 10,			    // T_ASSLASH, T_ASMOD,
+  15,				      // T_QUESTION,
+  20, 30,			    // T_LOGOR, T_LOGAND
+  40, 50, 60,			// T_OR, T_XOR, T_AMPER
+  70, 70,			    // T_EQ, T_NE
+  80, 80, 80, 80,	// T_LT, T_GT, T_LE, T_GE
+  90, 90,			    // T_LSHIFT, T_RSHIFT
+  100, 100,			  // T_PLUS, T_MINUS
+  110, 110, 110		// T_STAR, T_SLASH, T_MOD
 };
 
 // Convert a token type into an AST operation (AST node type)
 int binastop(int tokentype) {
   // For tokens in this range, there is a 1-1 mapping between
   // token type and node type
-  if (tokentype > T_EOF && tokentype <= T_SLASH)
+  if (tokentype > T_EOF && tokentype <= T_MOD)
     return tokentype;
 
   fatald("Syntax error, token", tokentype);
@@ -48,7 +49,7 @@ int binastop(int tokentype) {
 static int op_precedence(int tokentype) {
   int prec = OpPrec[tokentype];
 
-  if (tokentype >= T_VOID)
+  if (tokentype > T_MOD)
     fatald("Token with no precedence in op_precedence", tokentype);
 
   if (prec == 0) {
@@ -410,7 +411,7 @@ struct ASTnode *binexpr(int ptp) {
 
   // If we hit a semi colon, return the left node
   // Ensure that we have a binary operator
-  if ((tokentype == T_SEMI) || (tokentype < T_ASSIGN) || (tokentype > T_SLASH)) {
+  if ((tokentype == T_SEMI) || (tokentype < T_ASSIGN) || (tokentype > T_MOD)) {
     left->rvalue = 1;
     return left;
   }
@@ -478,7 +479,7 @@ struct ASTnode *binexpr(int ptp) {
 
     // If we hit a semi colon, return the left node
     // Ensure that we have a binary operator
-    if ((tokentype == T_SEMI) || (tokentype < T_ASSIGN) || (tokentype > T_SLASH)) {
+    if ((tokentype == T_SEMI) || (tokentype < T_ASSIGN) || (tokentype > T_MOD)) {
       left->rvalue = 1;
       return left;
     }
