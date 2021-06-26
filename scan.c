@@ -24,7 +24,7 @@ char *Tstring[] = {
 };
 
 // Whether or not we are at a start of a line
-static int Linestart = 1;
+int Linestart = 1;
 
 // Get the next char from the input file.
 static int next_ch(void) {
@@ -491,7 +491,7 @@ int scan(struct token *t) {
       t->intvalue = scanch();
       t->token = T_INTLIT;
       if (next_ch() != '\'')
-        fatal("Expected '\\'' at the end of char literal");
+        fatal("Expected ' at the end of char literal");
       break;
     case '"':
       scanstr(Text);

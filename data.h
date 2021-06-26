@@ -3,6 +3,7 @@
 
 extern int Line;
 extern int Putback;
+extern int Linestart;
 
 extern FILE *Infile;
 extern char *Infilename;

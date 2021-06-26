@@ -19,10 +19,10 @@ void cgprintint(int r);
 // Compares values in two registers based on the
 // given operator and returns a register containing
 // either 0 or 1 depending on the result of the comparison
-int cgcompare_and_set(int ASTop, int r1, int r2);
+int cgcompare_and_set(int ASTop, int r1, int r2, int type);
 // Compares values in two registers and jumps to the label
 // if the comparison is false
-int cgcompare_and_jump(int ASTop, int r1, int r2, int label);
+int cgcompare_and_jump(int ASTop, int r1, int r2, int label, int type);
 
 // Generates a jump to a given label
 void cgjump(int l);

@@ -341,6 +341,7 @@ struct ASTnode *prefix(int ptp) {
     case T_STAR:
       scan(&Token);
       tree = prefix(ptp);
+      tree->rvalue= 1;
 
       if (!ptrtype(tree->type)) {
         fatal("* operator must be followed by an identifier or *");

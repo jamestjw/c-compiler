@@ -92,6 +92,7 @@ static char *do_compile(char *filename) {
   }
 
   Line = 1;
+  Linestart = 1;
   Putback = '\n';
   clear_symtable();
 

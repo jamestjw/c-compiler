@@ -96,8 +96,6 @@ int alloc_register(void) {
   // Since we've no available registers, we spill one
   reg = (spillreg % NUMFREEREGS);
   spillreg++;
-  // TODO: Remove debug statement
-  fprintf(Outfile, "# spilling reg %d\n", reg);
   pushreg(reg);
   return reg;
 }
@@ -105,7 +103,6 @@ int alloc_register(void) {
 // Frees up a previously allocated register.
 static void free_register(int reg) {
   if (freereg[reg] != 0) {
-    fprintf(Outfile, "# error trying to free register %d\n", reg);
     fatald("Error trying to free register", reg);
   }
 
@@ -114,7 +111,6 @@ static void free_register(int reg) {
   if (spillreg > 0) {
     spillreg--;
     reg = (spillreg % NUMFREEREGS);
-    fprintf(Outfile, "# unspilling reg %d\n", reg);
     popreg(reg);
   } else {
     freereg[reg] = 1;
@@ -151,23 +147,23 @@ void cgpreamble() {
           "# %%rsi = switch table, %%rax = expr\n"
           "# from SubC: http://www.t3x.org/subc/\n"
           "\n"
-          "switch:\n"
+          "__switch:\n"
           "        pushq   %%rsi\n"
           "        movq    %%rdx, %%rsi\n"
           "        movq    %%rax, %%rbx\n"
           "        cld\n"
           "        lodsq\n"
           "        movq    %%rax, %%rcx\n"
-          "next:\n"
+          "__next:\n"
           "        lodsq\n"
           "        movq    %%rax, %%rdx\n"
           "        lodsq\n"
           "        cmpq    %%rdx, %%rbx\n"
-          "        jnz     no\n"
+          "        jnz     __no\n"
           "        popq    %%rsi\n"
           "        jmp     *%%rax\n"
-          "no:\n"
-          "        loop    next\n"
+          "__no:\n"
+          "        loop    __next\n"
           "        lodsq\n"
           "        popq    %%rsi\n"
           "        jmp     *%%rax\n"
@@ -229,6 +225,7 @@ void cgfuncpostamble(struct symtable *sym) {
           "\tret\n",
           Outfile
   );
+  freeall_registers(NOREG);
 }
 
 void cgpostamble() {}
@@ -389,13 +386,25 @@ void cgglobsym(struct symtable *sym) {
   }
 }
 
-int cgcompare_and_set(int ASTop, int r1, int r2) {
+int cgcompare_and_set(int ASTop, int r1, int r2, int type) {
+  int size = cgprimsize(type);
+
   if (ASTop < A_EQ || ASTop > A_GE)
     fatal("Bad ASTop in cgcompare_and_set()");
 
-  // cmpq %r2, %r1
-  // This calculates %r1 - %r2
-  fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
+  switch (size) {
+    // cmpq %r2, %r1
+    // This calculates %r1 - %r2
+    case 1:
+      fprintf(Outfile, "\tcmpb\t%s, %s\n", breglist[r2], breglist[r1]);
+      break;
+    case 4:
+      fprintf(Outfile, "\tcmpl\t%s, %s\n", dreglist[r2], dreglist[r1]);
+      break;
+    default:
+      fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
+  }
+
   // setge %r10b
   // This only sets the lowest byte of the register
   // Note: These instructions only works on 8-bit registers
@@ -419,12 +428,24 @@ void cgjump(int l) {
   fprintf(Outfile, "\tjmp\tL%d\n", l);
 }
 
-int cgcompare_and_jump(int ASTop, int r1, int r2, int label) {
+int cgcompare_and_jump(int ASTop, int r1, int r2, int label, int type) {
+  int size = cgprimsize(type);
+
   if (ASTop < A_EQ || ASTop > A_GE)
     fatal("Bad ASTop in cgcompare_and_jump()");
 
-  // cmpq %r2, %r1
-  fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
+  switch (size) {
+    // cmpq %r2, %r1
+    case 1:
+      fprintf(Outfile, "\tcmpb\t%s, %s\n", breglist[r2], breglist[r1]);
+      break;
+    case 4:
+      fprintf(Outfile, "\tcmpl\t%s, %s\n", dreglist[r2], dreglist[r1]);
+      break;
+    default:
+      fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
+  }
+
   // jne L1
   fprintf(Outfile, "\t%s\tL%d\n", invcmplist[ASTop - A_EQ], label);
   freeall_registers(NOREG);
@@ -507,7 +528,7 @@ void cgreturn(int reg, struct symtable *sym) {
 int cgaddress(struct symtable *sym) {
   int r = alloc_register();
 
-  if (sym->class == C_GLOBAL || sym->class == C_STATIC)
+  if (sym->class == C_GLOBAL || sym->class == C_STATIC || sym->class == C_EXTERN)
     // leaq varname(%rip), %r10
     fprintf(Outfile, "\tleaq\t%s(%%rip), %s\n", sym->name, reglist[r]);
   else
@@ -770,7 +791,7 @@ void cgswitch(int reg, int casecount, int toplabel,
   //      jmp switch
   fprintf(Outfile, "\tmovq\t%s, %%rax\n", reglist[reg]);
   fprintf(Outfile, "\tleaq\tL%d(%%rip), %%rdx\n", label);
-  fprintf(Outfile, "\tjmp\tswitch\n");
+  fprintf(Outfile, "\tjmp\t__switch\n");
 }
 
 void cgmove(int r1, int r2) {

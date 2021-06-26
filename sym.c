@@ -203,6 +203,9 @@ void clear_symtable(void) {
   Parmhead = Parmtail = NULL;
   Membhead = Membtail = NULL;
   Structhead = Structtail = NULL;
+  Unionhead = Uniontail = NULL;
+  Enumhead = Enumtail = NULL;
+  Typehead = Typetail = NULL;
 }
 
 void freeloclsyms(void) {

@@ -26,8 +26,8 @@ int is_new_symbol(struct symtable *sym, int class, int type, struct symtable *ct
 
   // We allow previously defined extern symbols to now be declared
   // as global and vice versa
-  if (((sym->class == C_GLOBAL) && class == C_EXTERN) ||
-      (sym->class == C_EXTERN && class == C_GLOBAL)) {
+  if ((sym->class== C_GLOBAL && class== C_EXTERN)
+      || (sym->class== C_EXTERN && class== C_GLOBAL)) {
     // Verify that the types match
     if (type != sym->type)
       fatals("Type mismatch between global/extern", sym->name);
