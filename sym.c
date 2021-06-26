@@ -229,7 +229,7 @@ void freestaticsyms(void) {
   }
 }
 
-static void dumptable(struct symtable *head, char *name, int indent);
+void dumptable(struct symtable *head, char *name, int indent);
 
 static void dumpsym(struct symtable *sym, int indent) {
   int i;
@@ -347,7 +347,7 @@ static void dumpsym(struct symtable *sym, int indent) {
   }
 }
 
-static void dumptable(struct symtable *head, char *name, int indent) {
+void dumptable(struct symtable *head, char *name, int indent) {
   struct symtable *sym;
 
   if (head != NULL && name != NULL)

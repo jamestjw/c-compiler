@@ -123,7 +123,7 @@ void cgfuncpreamble(char *name) {
     fprintf(Outfile,
           "\t.text\n"
           "\t.globl\t%s\n"
-          "\t.type\t%s, \%%function\n"
+          "\t.type\t%s, %%function\n"
           "%s:\n"
           "\tpush\t{fp, lr}\n"
           "\tadd\tfp, sp, #4\n"

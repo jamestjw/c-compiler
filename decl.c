@@ -15,6 +15,7 @@ int Looplevel;
 int Switchlevel;
 
 int parse_type(struct symtable **ctype, int *class);
+
 static int param_declaration_list(struct symtable *oldfuncsym, struct symtable *newfuncsym);
 
 // Given a symtable entry that may already exist, return true if the symbol
@@ -92,7 +93,7 @@ static struct symtable *composite_declaration(int type) {
   scan(&Token);
 
   while (1) {
-    t = declaration_list(&m ,C_MEMBER, T_SEMI, T_RBRACE, &unused);
+    t = declaration_list(&m, C_MEMBER, T_SEMI, T_RBRACE, &unused);
     if (t == -1)
       fatal("Bad type in member list");
 
@@ -201,7 +202,7 @@ static void enum_declaration(void) {
 // Parse a typedef definition and return the type
 // and ctype it represents
 static int typedef_declaration(struct symtable **ctype) {
-  int type, class=0;
+  int type, class = 0;
 
   // Consume the typedef keyword
   scan(&Token);
@@ -353,7 +354,7 @@ int parse_cast(struct symtable **ctype) {
 // The identifier should already have been consumed
 // prior to calling this function.
 static struct symtable *function_declaration(char *funcname, int type,
-    struct symtable *ctype, int class) {
+                                             struct symtable *ctype, int class) {
   struct ASTnode *tree, *finalstmt;
   struct symtable *oldfuncsym, *newfuncsym = NULL;
   int endlabel, paramcnt;
@@ -411,7 +412,7 @@ static struct symtable *function_declaration(char *funcname, int type,
 
     finalstmt = (tree->op == A_GLUE ? tree->right : tree);
     if (finalstmt == NULL || finalstmt->op != A_RETURN)
-      fatal("No return for function with non-void type");
+      fatals("No return for function with non-void type", Functionid->name);
   }
 
   tree = mkastunary(A_FUNCTION, type, ctype, tree, oldfuncsym, endlabel);
@@ -431,7 +432,7 @@ static struct symtable *function_declaration(char *funcname, int type,
 }
 
 static struct symtable *array_declaration(char *varname, int type,
-    struct symtable *ctype, int class) {
+                                          struct symtable *ctype, int class) {
   struct symtable *sym = NULL;
   int nelems = -1;    // Assume number of elements is not given
   int maxelems;       // Max number of elems in the init list
@@ -449,11 +450,11 @@ static struct symtable *array_declaration(char *varname, int type,
 
   match(T_RBRACKET, "]");
 
-  switch(class) {
+  switch (class) {
     case C_EXTERN:
     case C_GLOBAL:
     case C_STATIC:
-      sym= findglob(varname);
+      sym = findglob(varname);
       if (is_new_symbol(sym, class, pointer_to(type), ctype))
         sym = addglob(varname, pointer_to(type), ctype, S_ARRAY, class, 0, 0);
       break;
@@ -526,7 +527,7 @@ static struct symtable *array_declaration(char *varname, int type,
 }
 
 static struct symtable *scalar_declaration(char *varname, int type,
-  struct symtable *ctype, int class, struct ASTnode **tree) {
+                                           struct symtable *ctype, int class, struct ASTnode **tree) {
   struct symtable *sym = NULL;
   struct ASTnode *varnode, *exprnode;
   *tree = NULL;
@@ -623,7 +624,7 @@ int parse_literal(int type) {
 }
 
 static struct symtable *symbol_declaration(int type, struct symtable *ctype, int class,
-    struct ASTnode **tree) {
+                                           struct ASTnode **tree) {
   struct symtable *sym = NULL;
   // We might scan in more identifiers for assignment expressions,
   // hence we copy the name just in case.
@@ -661,7 +662,7 @@ static struct symtable *symbol_declaration(int type, struct symtable *ctype, int
 // Parse a list of symbols where there is an initial type
 // Return the type of the symbols, et1 and et2 are end tokens
 int declaration_list(struct symtable **ctype, int class, int et1, int et2,
-    struct ASTnode **gluetree) {
+                     struct ASTnode **gluetree) {
   int inittype, type;
   struct symtable *sym;
   struct ASTnode *tree = NULL;
@@ -703,6 +704,9 @@ int declaration_list(struct symtable **ctype, int class, int et1, int et2,
 
     comma();
   }
+
+  // -Wall
+  return(0);
 }
 
 static int param_declaration_list(struct symtable *oldfuncsym, struct symtable *newfuncsym) {
@@ -752,12 +756,12 @@ static int param_declaration_list(struct symtable *oldfuncsym, struct symtable *
 
 
 void global_declarations(void) {
-   struct symtable *ctype;
-   struct ASTnode *unused;
-   while (Token.token != T_EOF) {
-     declaration_list(&ctype, C_GLOBAL, T_SEMI, T_EOF, &unused);
+  struct symtable *ctype;
+  struct ASTnode *unused;
+  while (Token.token != T_EOF) {
+    declaration_list(&ctype, C_GLOBAL, T_SEMI, T_EOF, &unused);
 
-     if (Token.token == T_SEMI)
-       scan(&Token);
-   }
+    if (Token.token == T_SEMI)
+      scan(&Token);
+  }
 }

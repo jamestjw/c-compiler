@@ -35,4 +35,5 @@ void copyfuncparams(int slot);
 void clear_symtable(void);
 void freestaticsyms(void);
 
+void dumptable(struct symtable *head, char *name, int indent);
 void dumpsymtables(void);

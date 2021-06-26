@@ -46,11 +46,11 @@ static char *alter_suffix(char *str, char suffix) {
   char *newstr;
 
   if ((newstr = strdup(str)) == NULL)
-    return NULL;
+    return (NULL);
 
   // Find the '.'
   if ((posn = strchr(newstr, '.')) == NULL)
-    return NULL;
+    return (NULL);
 
   // Ensure that a suffix exists
   posn++;
@@ -140,7 +140,7 @@ static char *do_assemble(char *filename) {
   return outfilename;
 }
 
-void do_link(char *outfilename, char *objlist[]) {
+void do_link(char *outfilename, char **objlist) {
   int cnt, size = TEXTLEN;
   char cmd[TEXTLEN], *cptr;
   int err;
@@ -167,8 +167,8 @@ void do_link(char *outfilename, char *objlist[]) {
   }
 }
 
-int main(int argc, char* argv[]) {
-  int i, objcount = 0;
+int main(int argc, char** argv) {
+  int i, j, objcount = 0;
   char *asmfile, *objfile;
   char *objlist[MAXOBJ];
   char *outfilename = AOUT;
@@ -185,7 +185,7 @@ int main(int argc, char* argv[]) {
   for (i = 1; i < argc; i++) {
     if (*argv[i] != '-') break;
 
-    for (int j = 1; (*argv[i] == '-') && argv[i][j]; j++) {
+    for (j = 1; (*argv[i] == '-') && argv[i][j]; j++) {
       switch(argv[i][j]) {
         case 'o':
           outfilename = argv[++i];

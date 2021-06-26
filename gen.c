@@ -5,11 +5,12 @@
 #include "gen.h"
 #include "misc.h"
 
+static int labelid = 1;
+
 // Generate and return a new label number
 // each time this function is invoked.
 int genlabel(void) {
-  static int id = 1;
-  return id++;
+  return labelid++;
 }
 
 // Generate code for an IF statement and an
@@ -427,6 +428,9 @@ int genAST(struct ASTnode *n, int iflabel,
       fprintf(stderr, "Unknown AST operator %d\n", n->op);
       exit(1);
   }
+
+  // -Wall
+  return NOREG;
 }
 
 void genpreamble()        { cgpreamble(); }

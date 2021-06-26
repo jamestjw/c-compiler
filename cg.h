@@ -1,7 +1,7 @@
 void freeall_registers(int keepreg);
 void cgpreamble();
 void cgpostamble();
-void cgfuncpreamble(struct symtable *n);
+void cgfuncpreamble(struct symtable *sym);
 void cgfuncpostamble(struct symtable *sym);
 
 int cgloadint(int value, int type);
@@ -25,7 +25,7 @@ int cgcompare_and_set(int ASTop, int r1, int r2);
 int cgcompare_and_jump(int ASTop, int r1, int r2, int label);
 
 // Generates a jump to a given label
-void cgjump(int);
+void cgjump(int l);
 // Generates a label, e.g. L1
 void cglabel(int l);
 

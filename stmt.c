@@ -99,18 +99,23 @@ static struct ASTnode *for_statement(void) {
 
 static struct ASTnode *return_statement(void) {
   struct ASTnode *tree = NULL;
+  // Return statements do not necessarily have parentheses
+  int parentheses_present = 0;
 
   match(T_RETURN, "return");
 
   if (Token.token == T_LPAREN) {
-    // Can't return a value if function returns P_VOID
-    if (Functionid->type == P_VOID)
-      fatal("Can't return from a void function");
-
-    // Skip the left parenthesis
+    parentheses_present = 1;
     lparen();
+  }
 
-    // Parse the following expression
+  if (Functionid->type == P_VOID) {
+    if (parentheses_present || (!parentheses_present && Token.token != T_SEMI))
+      fatal("Can't return from a void function");
+  } else {
+    if (Token.token == T_SEMI)
+      fatal("Must return a value from a non-void function");
+
     tree = binexpr(0);
 
     // Ensure this is compatible with the function's type
@@ -118,13 +123,8 @@ static struct ASTnode *return_statement(void) {
     if (tree == NULL)
       fatal("Incompatible return type");
 
-    // Get the ')'
-    rparen();
-  } else {
-    // Allow the following syntax in void functions
-    // void do_nothing(void) { return; }
-    if (Functionid->type != P_VOID)
-      fatal("Must return a value from a non-void function");
+    if (parentheses_present)
+      rparen();
   }
 
   tree = mkastunary(A_RETURN, P_NONE, NULL, tree, NULL, 0);

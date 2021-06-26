@@ -7,9 +7,6 @@
 
 char Text[TEXTLEN + 1];
 
-// Pointer to a rejected token
-static struct token *Rejtoken = NULL;
-
 // List of token strings, for debugging purposes
 char *Tstring[] = {
   "EOF", "=", "+=", "-=", "*=", "/=", "%=",
@@ -30,7 +27,7 @@ char *Tstring[] = {
 static int Linestart = 1;
 
 // Get the next char from the input file.
-static int next(void) {
+static int next_ch(void) {
   int c, l;
 
   // If a character was previously asked to be put back,
@@ -98,20 +95,21 @@ static void putback(int c) {
 static int skip(void) {
   int c;
 
-  c = next();
+  c = next_ch();
 
   while (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' ) {
-    c = next();
+    c = next_ch();
   }
 
   return c;
 }
 
 static int chrpos(char *s, int c) {
-  char *p;
-
-  p = strchr(s, c);
-  return (p ? p - s : -1);
+  int i;
+  for (i = 0; s[i] != '\0'; i++)
+    if (s[i] == (char) c)
+      return i;
+  return -1;
 }
 
 // Scan and return an integer literal.
@@ -123,9 +121,9 @@ static int scanint(int c) {
   // figure out the actual radix.
   if (c == '0') {
     // If it begins with 0x, its radix is 16
-    if ((c = next()) == 'x') {
+    if ((c = next_ch()) == 'x') {
       radix = 16;
-      c = next();
+      c = next_ch();
     } else {
       // Otherwise the radix is 8
       radix = 8;
@@ -137,7 +135,7 @@ static int scanint(int c) {
     if (k >= radix)
       fatalc("Invalid digit in integer literal", c);
     val = val * radix + k;
-    c = next();
+    c = next_ch();
   }
 
   // The above while loop exits when we hit a char
@@ -160,12 +158,11 @@ static int scanident(int c, char *buf, int lim) {
   // Identifiers contain letters, digits and underscores only
   while (isalpha(c) || isdigit(c) || c == '_') {
     if (lim - 1 == i) {
-      printf("identifier too long on line %d\n", Line);
-      exit(1);
+      fatal("identifier too long");
     } else if (i < lim - 1) {
-      buf[i++] = c;
+      buf[i++] = (char) c;
     }
-    c = next();
+    c = next_ch();
   }
 
   // The while loop terminates when we hit an invalid character,
@@ -264,7 +261,7 @@ static int keyword(char *s) {
 static int hexchar(void) {
   int c, h, n = 0, f = 0;
 
-  while (isxdigit(c = next())) {
+  while (isxdigit(c = next_ch())) {
     // Convert from char to int value
     h = chrpos("0123456789abcdef", tolower(c));
     // Add to running hex value
@@ -287,11 +284,11 @@ static int hexchar(void) {
 static int scanch(void) {
   int i, c, c2;
 
-  c = next();
+  c = next_ch();
 
   // Handle escape sequences
   if (c == '\\') {
-    switch (c = next()) {
+    switch (c = next_ch()) {
         case 'a':  return '\a';
         case 'b':  return '\b';
         case 'f':  return '\f';
@@ -311,7 +308,7 @@ static int scanch(void) {
         case '6':
         case '7':
           // Handling octals
-          for (i = c2 = 0; isdigit(c) && c < '8'; c = next()) {
+          for (i = c2 = 0; isdigit(c) && c < '8'; c = next_ch()) {
             if (++i > 3)
               break;
             c2 = c2 * 8 + (c - '0');
@@ -336,17 +333,11 @@ static int scanstr(char *buf) {
       buf[i] = 0;
       return i;
     }
-    buf[i] = c;
+    buf[i] = (char) c;
   }
 
   fatal("String literal too long");
   return 0;
-}
-
-void reject_token(struct token *t) {
-  if (Rejtoken != NULL)
-    fatal("Can't reject token twice");
-  Rejtoken = t;
 }
 
 int scan(struct token *t) {
@@ -360,13 +351,6 @@ int scan(struct token *t) {
     return 1;
   }
 
-  // Return a rejected token if possible
-  if (Rejtoken != NULL) {
-    t = Rejtoken;
-    Rejtoken = NULL;
-    return 1;
-  }
-
   // Skip whitespace
   c = skip();
 
@@ -376,7 +360,7 @@ int scan(struct token *t) {
       t->token = T_EOF;
       return 0;
     case '+':
-      if ((c = next()) == '+') {
+      if ((c = next_ch()) == '+') {
 	      t->token = T_INC;
       } else if (c == '=') {
         t->token = T_ASPLUS;
@@ -386,7 +370,7 @@ int scan(struct token *t) {
       }
       break;
     case '-':
-      if ((c = next()) == '-') {
+      if ((c = next_ch()) == '-') {
 	      t->token = T_DEC;
       } else if (c == '>') {
         t->token = T_ARROW;
@@ -405,7 +389,7 @@ int scan(struct token *t) {
       }
       break;
     case '*':
-      if ((c = next()) == '=') {
+      if ((c = next_ch()) == '=') {
         t->token = T_ASSTAR;
       } else {
         putback(c);
@@ -413,7 +397,7 @@ int scan(struct token *t) {
       }
       break;
     case '/':
-      if ((c = next()) == '=') {
+      if ((c = next_ch()) == '=') {
         t->token = T_ASSLASH;
       } else {
         putback(c);
@@ -424,7 +408,7 @@ int scan(struct token *t) {
       t->token = T_SEMI;
       break;
     case '=':
-      if ((c = next()) == '=') {
+      if ((c = next_ch()) == '=') {
         t->token = T_EQ;
       } else {
         putback(c);
@@ -432,7 +416,7 @@ int scan(struct token *t) {
       }
       break;
     case '!':
-      if ((c = next()) == '=') {
+      if ((c = next_ch()) == '=') {
         t->token = T_NE;
       } else {
         putback(c);
@@ -440,7 +424,7 @@ int scan(struct token *t) {
       }
       break;
     case '<':
-      if ((c = next()) == '=') {
+      if ((c = next_ch()) == '=') {
         t->token = T_LE;
       } else if (c == '<') {
         t->token = T_LSHIFT;
@@ -450,7 +434,7 @@ int scan(struct token *t) {
       }
       break;
     case '>':
-      if ((c = next()) == '=') {
+      if ((c = next_ch()) == '=') {
         t->token = T_GE;
       } else if (c == '>') {
         t->token = T_RSHIFT;
@@ -472,7 +456,7 @@ int scan(struct token *t) {
       t->token = T_RPAREN;
       break;
     case '&':
-      if ((c = next()) == '&') {
+      if ((c = next_ch()) == '&') {
         t->token = T_LOGAND;
       } else {
         putback(c);
@@ -489,7 +473,7 @@ int scan(struct token *t) {
       t->token = T_RBRACKET;
       break;
     case '|':
-      if ((c = next()) == '|') {
+      if ((c = next_ch()) == '|') {
         t->token = T_LOGOR;
       } else {
         putback(c);
@@ -506,8 +490,8 @@ int scan(struct token *t) {
     case '\'':
       t->intvalue = scanch();
       t->token = T_INTLIT;
-      if (next() != '\'')
-        fatal("Expected \"'\" at the end of char literal");
+      if (next_ch() != '\'')
+        fatal("Expected '\\'' at the end of char literal");
       break;
     case '"':
       scanstr(Text);
@@ -523,7 +507,7 @@ int scan(struct token *t) {
       t->token = T_QUESTION;
       break;
     case '%':
-      if ((c = next()) == '=') {
+      if ((c = next_ch()) == '=') {
         t->token = T_ASMOD;
       } else {
         putback(c);

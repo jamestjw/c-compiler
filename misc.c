@@ -66,7 +66,7 @@ void fatald(char *s, int d) {
 
 }
 void fatalc(char *s, int c) {
-  fprintf(stderr, "%s:%c on line %d\n", s, c, Line);
+  fprintf(stderr, "%s:%c on line %d of %s\n", s, c, Line, Infilename);
   fclose(Outfile);
   unlink(Outfilename);
   exit(1);

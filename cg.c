@@ -7,34 +7,36 @@
 #include "types.h"
 
 // Flag to say which section were are outputting in to
-enum { no_seg, text_seg, data_seg } currSeg = no_seg;
+enum {
+    no_seg, text_seg, data_seg
+} currSeg = no_seg;
 
 #define NUMFREEREGS 4
 #define FIRSTPARAMREG 9   // Position of first parameter register
 
 // List of generic registers that the code will work on
 static char *reglist[] =
-  { "%r10", "%r11", "%r12", "%r13", "%r9", "%r8", "%rcx", "%rdx", "%rsi",
-"%rdi" };
+        {"%r10", "%r11", "%r12", "%r13", "%r9", "%r8", "%rcx", "%rdx", "%rsi",
+         "%rdi"};
 // Lower 8 bits of registers in reglist
 static char *breglist[] =
-  { "%r10b", "%r11b", "%r12b", "%r13b", "%r9b", "%r8b", "%cl", "%dl", "%sil",
-"%dil" };
+        {"%r10b", "%r11b", "%r12b", "%r13b", "%r9b", "%r8b", "%cl", "%dl", "%sil",
+         "%dil"};
 // Lower 4 bytes of registers in reglist
 static char *dreglist[] =
-  { "%r10d", "%r11d", "%r12d", "%r13d", "%r9d", "%r8d", "%ecx", "%edx",
-"%esi", "%edi" };
+        {"%r10d", "%r11d", "%r12d", "%r13d", "%r9d", "%r8d", "%ecx", "%edx",
+         "%esi", "%edi"};
 
 // List of available registers
 static int freereg[NUMFREEREGS];
 
 // List of comparison instructions corresponding to
 // A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
-static char *cmplist[] = { "sete", "setne", "setl", "setg", "setle", "setge" };
+static char *cmplist[] = {"sete", "setne", "setl", "setg", "setle", "setge"};
 
 // List of inverted jump instructions corresponding to
 // A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
-static char *invcmplist[] = { "jne", "je", "jge", "jle", "jg", "jl" };
+static char *invcmplist[] = {"jne", "je", "jge", "jle", "jg", "jl"};
 
 // Position of next local variable relative to stack base pointer
 static int localOffset;
@@ -131,7 +133,7 @@ void spill_all_regs(void) {
 static void unspill_all_regs(void) {
   int i;
 
-  for (i = NUMFREEREGS-1; i >= 0; i--)
+  for (i = NUMFREEREGS - 1; i >= 0; i--)
     popreg(i);
 }
 
@@ -144,32 +146,32 @@ static int newlocaloffset(int size) {
 void cgpreamble() {
   freeall_registers(NOREG);
   cgtextseg();
-    fprintf(Outfile,
-	  "# internal switch(expr) routine\n"
-	  "# %%rsi = switch table, %%rax = expr\n"
-	  "# from SubC: http://www.t3x.org/subc/\n"
-	  "\n"
-	  "switch:\n"
-	  "        pushq   %%rsi\n"
-	  "        movq    %%rdx, %%rsi\n"
-	  "        movq    %%rax, %%rbx\n"
-	  "        cld\n"
-	  "        lodsq\n"
-	  "        movq    %%rax, %%rcx\n"
-	  "next:\n"
-	  "        lodsq\n"
-	  "        movq    %%rax, %%rdx\n"
-	  "        lodsq\n"
-	  "        cmpq    %%rdx, %%rbx\n"
-	  "        jnz     no\n"
-	  "        popq    %%rsi\n"
-	  "        jmp     *%%rax\n"
-	  "no:\n"
-	  "        loop    next\n"
-	  "        lodsq\n"
-	  "        popq    %%rsi\n"
-    "        jmp     *%%rax\n"
-    "\n");
+  fprintf(Outfile,
+          "# internal switch(expr) routine\n"
+          "# %%rsi = switch table, %%rax = expr\n"
+          "# from SubC: http://www.t3x.org/subc/\n"
+          "\n"
+          "switch:\n"
+          "        pushq   %%rsi\n"
+          "        movq    %%rdx, %%rsi\n"
+          "        movq    %%rax, %%rbx\n"
+          "        cld\n"
+          "        lodsq\n"
+          "        movq    %%rax, %%rcx\n"
+          "next:\n"
+          "        lodsq\n"
+          "        movq    %%rax, %%rdx\n"
+          "        lodsq\n"
+          "        cmpq    %%rdx, %%rbx\n"
+          "        jnz     no\n"
+          "        popq    %%rsi\n"
+          "        jmp     *%%rax\n"
+          "no:\n"
+          "        loop    next\n"
+          "        lodsq\n"
+          "        popq    %%rsi\n"
+          "        jmp     *%%rax\n"
+          "\n");
 }
 
 void cgfuncpreamble(struct symtable *sym) {
@@ -187,11 +189,11 @@ void cgfuncpreamble(struct symtable *sym) {
   // Output the function start, save the %rsp and %rsp
   if (sym->class == C_GLOBAL)
     fprintf(Outfile, "\t.globl\t%s\n"
-	  "\t.type\t%s, @function\n", name, name);
+                     "\t.type\t%s, @function\n", name, name);
 
   fprintf(Outfile,
-	  "%s:\n" "\tpushq\t%%rbp\n"
-	  "\tmovq\t%%rsp, %%rbp\n", name);
+          "%s:\n" "\tpushq\t%%rbp\n"
+          "\tmovq\t%%rsp, %%rbp\n", name);
 
   // Copy in-register parameters to the stack
   for (parm = sym->member, cnt = 1; parm != NULL; parm = parm->next, cnt++) {
@@ -223,10 +225,10 @@ void cgfuncpostamble(struct symtable *sym) {
   // Restore stack pointer
   fprintf(Outfile, "\taddq\t$%d, %%rsp\n", stackOffset);
   fputs(
-      "\tpopq %rbp\n"
-      "\tret\n",
-      Outfile
-      );
+          "\tpopq %rbp\n"
+          "\tret\n",
+          Outfile
+  );
 }
 
 void cgpostamble() {}
@@ -314,15 +316,15 @@ int cgstorglob(int r, struct symtable *sym) {
     case 1:
       // Only move a single byte for chars
       // e.g. movb %r10b, identifier(%rip)
-      fprintf(Outfile, "\tmovb\t%s, %s(\%%rip)\n", breglist[r], sym->name);
+      fprintf(Outfile, "\tmovb\t%s, %s(%%rip)\n", breglist[r], sym->name);
       break;
     case 4:
       // e.g. movl %r10d, identifier(%rip)
-      fprintf(Outfile, "\tmovl\t%s, %s(\%%rip)\n", dreglist[r], sym->name);
+      fprintf(Outfile, "\tmovl\t%s, %s(%%rip)\n", dreglist[r], sym->name);
       break;
     case 8:
       // e.g. movq %r10, identifier(%rip)
-      fprintf(Outfile, "\tmovq\t%s, %s(\%%rip)\n", reglist[r], sym->name);
+      fprintf(Outfile, "\tmovq\t%s, %s(%%rip)\n", reglist[r], sym->name);
       break;
     default:
       fatald("Bad type in cgloadglob", sym->type);
@@ -331,23 +333,23 @@ int cgstorglob(int r, struct symtable *sym) {
   return r;
 }
 
-void cgglobsym(struct symtable *node) {
+void cgglobsym(struct symtable *sym) {
   int size, type;
   int initvalue;
-  int i;
+  int i, j;
 
-  if (node == NULL)
+  if (sym == NULL)
     return;
-  if (node->stype == S_FUNCTION)
+  if (sym->stype == S_FUNCTION)
     return;
 
-  if (node->stype == S_ARRAY) {
+  if (sym->stype == S_ARRAY) {
     // Since arrays are pointers
-    type = value_at(node->type);
-    size = typesize(type, node->ctype);
+    type = value_at(sym->type);
+    size = typesize(type, sym->ctype);
   } else {
-    size = node->size;
-    type = node->type;
+    size = sym->size;
+    type = sym->type;
   }
 
   // .data
@@ -356,31 +358,35 @@ void cgglobsym(struct symtable *node) {
   //            .long   0
   //            .long   0
   cgdataseg();
-  if (node->class == C_GLOBAL)
-    fprintf(Outfile, "\t.globl\t%s\n", node->name);
-  fprintf(Outfile, "%s:", node->name);
+  if (sym->class == C_GLOBAL)
+    fprintf(Outfile, "\t.globl\t%s\n", sym->name);
+  fprintf(Outfile, "%s:", sym->name);
 
-  for (i = 0; i < node->nelems; i++) {
+  for (i = 0; i < sym->nelems; i++) {
     initvalue = 0;
-    if (node->initlist != NULL)
-      initvalue = node->initlist[i];
+    if (sym->initlist != NULL)
+      initvalue = sym->initlist[i];
 
-     switch (size) {
-       case 1: fprintf(Outfile, "\t.byte\t%d\n", initvalue); break;
-       case 4: fprintf(Outfile, "\t.long\t%d\n", initvalue); break;
-       case 8:
-          // Generate ptr to string literal
-          if (node->initlist != NULL && type == pointer_to(P_CHAR) && initvalue != 0)
-            fprintf(Outfile, "\t.quad\tL%d\n", initvalue);
-          else
-            fprintf(Outfile, "\t.quad\t%d\n", initvalue);
-          break;
-       default:
-          for (int j = 0; j < size; j++) {
-            fprintf(Outfile, "\t.byte\t0\n");
-          }
-     }
- }
+    switch (size) {
+      case 1:
+        fprintf(Outfile, "\t.byte\t%d\n", initvalue);
+        break;
+      case 4:
+        fprintf(Outfile, "\t.long\t%d\n", initvalue);
+        break;
+      case 8:
+        // Generate ptr to string literal
+        if (sym->initlist != NULL && type == pointer_to(P_CHAR) && initvalue != 0)
+          fprintf(Outfile, "\t.quad\tL%d\n", initvalue);
+        else
+          fprintf(Outfile, "\t.quad\t%d\n", initvalue);
+        break;
+      default:
+        for (j = 0; j < size; j++) {
+          fprintf(Outfile, "\t.byte\t0\n");
+        }
+    }
+  }
 }
 
 int cgcompare_and_set(int ASTop, int r1, int r2) {
@@ -414,15 +420,15 @@ void cgjump(int l) {
 }
 
 int cgcompare_and_jump(int ASTop, int r1, int r2, int label) {
-   if (ASTop < A_EQ || ASTop > A_GE)
+  if (ASTop < A_EQ || ASTop > A_GE)
     fatal("Bad ASTop in cgcompare_and_jump()");
 
-   // cmpq %r2, %r1
-   fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
-   // jne L1
-   fprintf(Outfile, "\t%s\tL%d\n", invcmplist[ASTop - A_EQ], label);
-   freeall_registers(NOREG);
-   return NOREG;
+  // cmpq %r2, %r1
+  fprintf(Outfile, "\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]);
+  // jne L1
+  fprintf(Outfile, "\t%s\tL%d\n", invcmplist[ASTop - A_EQ], label);
+  freeall_registers(NOREG);
+  return NOREG;
 }
 
 int cgwiden(int r, int oldtype, int newtype) {
@@ -437,9 +443,12 @@ int cgprimsize(int type) {
     return 8;
 
   switch (type) {
-    case P_CHAR: return 1;
-    case P_INT: return 4;
-    case P_LONG: return 8;
+    case P_CHAR:
+      return 1;
+    case P_INT:
+      return 4;
+    case P_LONG:
+      return 8;
     default:
       fatald("Bad type in cgprimsize", type);
   }
@@ -460,8 +469,8 @@ int cgcall(struct symtable *sym, int numargs) {
     fprintf(Outfile, "\taddq\t$%d, %%rsp\n", 8 * (numargs - 6));
 
   unspill_all_regs();
- 
-  outr = alloc_register(); 
+
+  outr = alloc_register();
   // Move return code from %rax
   // movq %rax, %r9
   fprintf(Outfile, "\tmovq\t%%rax, %s\n", reglist[outr]);
@@ -575,7 +584,7 @@ void cgglobstrend(void) {
 int cgloadglobstr(int label) {
   int r = alloc_register();
   // leaq L2(%%rip), %r10
-  fprintf(Outfile, "\tleaq\tL%d(\%%rip), %s\n", label, reglist[r]);
+  fprintf(Outfile, "\tleaq\tL%d(%%rip), %s\n", label, reglist[r]);
   return r;
 }
 
@@ -651,7 +660,7 @@ int cglognot(int r) {
 
 int cgboolean(int r, int op, int label) {
   fprintf(Outfile, "\ttest\t%s, %s\n", reglist[r], reglist[r]);
-  switch(op) {
+  switch (op) {
     case A_IF:
     case A_WHILE:
     case A_LOGAND:
@@ -675,15 +684,15 @@ int cgstorlocal(int r, struct symtable *sym) {
   switch (cgprimsize(sym->type)) {
     case 1:
       fprintf(Outfile, "\tmovb\t%s, %d(%%rbp)\n", breglist[r],
-	      sym->st_posn);
+              sym->st_posn);
       break;
     case 4:
       fprintf(Outfile, "\tmovl\t%s, %d(%%rbp)\n", dreglist[r],
-	      sym->st_posn);
+              sym->st_posn);
       break;
     case 8:
       fprintf(Outfile, "\tmovq\t%s, %d(%%rbp)\n", reglist[r],
-	      sym->st_posn);
+              sym->st_posn);
       break;
     default:
       fatald("Bad type in cgstorlocal:", sym->type);
@@ -785,7 +794,7 @@ int cgloadvar(struct symtable *sym, int op) {
 
   // Negate offset for decrements
   if (op == A_PREDEC || op == A_POSTDEC)
-    offset = -offset; 
+    offset = -offset;
 
   // If we have a pre-op
   if (op == A_PREINC || op == A_PREDEC) {
@@ -798,41 +807,43 @@ int cgloadvar(struct symtable *sym, int op) {
     // Modify the value at the address by that much
     switch (sym->size) {
       case 1:
-        fprintf(Outfile, "\taddb\t$%d,(%s)\n", offset, reglist[r]); 
+        fprintf(Outfile, "\taddb\t$%d,(%s)\n", offset, reglist[r]);
         break;
       case 4:
-        fprintf(Outfile, "\taddl\t$%d,(%s)\n", offset, reglist[r]); 
+        fprintf(Outfile, "\taddl\t$%d,(%s)\n", offset, reglist[r]);
         break;
       case 8:
-        fprintf(Outfile, "\taddq\t$%d,(%s)\n", offset, reglist[r]); 
+        fprintf(Outfile, "\taddq\t$%d,(%s)\n", offset, reglist[r]);
         break;
     }
   }
 
   if (sym->class == C_LOCAL || sym->class == C_PARAM) {
-      switch (sym->size) {
-        case 1: 
-          fprintf(Outfile, "\tmovzbq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]); 
-          break;
-        case 4: 
-          fprintf(Outfile, "\tmovslq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]); 
-          break;
-        case 8: 
-          fprintf(Outfile, "\tmovq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]);
+    switch (sym->size) {
+      case 1:
+        fprintf(Outfile, "\tmovzbq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]);
+        break;
+      case 4:
+        fprintf(Outfile, "\tmovslq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]);
+        break;
+      case 8:
+        fprintf(Outfile, "\tmovq\t%d(%%rbp), %s\n", sym->st_posn, reglist[r]);
     }
   } else {
     switch (sym->size) {
-      case 1: 
-        fprintf(Outfile, "\tmovzbq\t%s(%%rip), %s\n", sym->name, reglist[r]); break;
-      case 4: 
-        fprintf(Outfile, "\tmovslq\t%s(%%rip), %s\n", sym->name, reglist[r]); break;
-      case 8: 
-        fprintf(Outfile, "\tmovq\t%s(%%rip), %s\n", sym->name, reglist[r]);      
+      case 1:
+        fprintf(Outfile, "\tmovzbq\t%s(%%rip), %s\n", sym->name, reglist[r]);
+        break;
+      case 4:
+        fprintf(Outfile, "\tmovslq\t%s(%%rip), %s\n", sym->name, reglist[r]);
+        break;
+      case 8:
+        fprintf(Outfile, "\tmovq\t%s(%%rip), %s\n", sym->name, reglist[r]);
     }
   }
 
   // If we have a post-operation, get a new register
-  if (op==A_POSTINC || op==A_POSTDEC) {
+  if (op == A_POSTINC || op == A_POSTDEC) {
     postreg = alloc_register();
 
     // Load the symbol's address
@@ -843,9 +854,15 @@ int cgloadvar(struct symtable *sym, int op) {
     // and change the value at that address
 
     switch (sym->size) {
-      case 1: fprintf(Outfile, "\taddb\t$%d,(%s)\n", offset, reglist[postreg]); break;
-      case 4: fprintf(Outfile, "\taddl\t$%d,(%s)\n", offset, reglist[postreg]); break;
-      case 8: fprintf(Outfile, "\taddq\t$%d,(%s)\n", offset, reglist[postreg]); break;
+      case 1:
+        fprintf(Outfile, "\taddb\t$%d,(%s)\n", offset, reglist[postreg]);
+        break;
+      case 4:
+        fprintf(Outfile, "\taddl\t$%d,(%s)\n", offset, reglist[postreg]);
+        break;
+      case 8:
+        fprintf(Outfile, "\taddq\t$%d,(%s)\n", offset, reglist[postreg]);
+        break;
     }
     // and free the register
     free_register(postreg);

@@ -20,11 +20,16 @@ size_t fwrite(void *ptr, size_t size, size_t nmemb, FILE *stream);
 int fclose(FILE *stream);
 int printf(char *format);
 int fprintf(FILE *stream, char *format);
+int sprintf(char *str, char *format);
+int snprintf(char *str, size_t size, char *format);
+int fgetc(FILE *stream);
 int fputc(int c, FILE *stream);
 int fputs(char *s, FILE *stream);
 int putc(int c, FILE *stream);
 int putchar(int c);
 int puts(char *s);
+FILE *popen(char *command, char *type);
+int pclose(FILE *stream);
 
 extern FILE *stdin;
 extern FILE *stdout;
