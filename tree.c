@@ -192,6 +192,45 @@ void dumpAST(struct ASTnode *n, int label, int level) {
     case A_ASSLASH:
       fprintf(stdout, "A_ASSLASH\n");
       return;
+    case A_TOBOOL:
+      fprintf(stdout, "A_TOBOOL\n");
+      return;
+    case A_LOGOR:
+      fprintf(stdout, "A_LOGOR\n");
+      return;
+    case A_LOGAND:
+      fprintf(stdout, "A_LOGAND\n");
+      return;
+    case A_AND:
+      fprintf(stdout, "A_AND\n");
+      return;
+    case A_ASMOD:
+      fprintf(stdout, "A_ASMOD\n");
+      return;
+    case A_INVERT:
+      fprintf(stdout, "A_INVERT\n");
+      return;
+    case A_LOGNOT:
+      fprintf(stdout, "A_LOGNOT\n");
+      return;
+    case A_LSHIFT:
+      fprintf(stdout, "A_LSHIFT\n");
+      return;
+    case A_MOD:
+      fprintf(stdout, "A_MOD\n");
+      return;
+    case A_OR:
+      fprintf(stdout, "A_OR\n");
+      return;
+    case A_RSHIFT:
+      fprintf(stdout, "A_RSHIFT\n");
+      return;
+    case A_TERNARY:
+      fprintf(stdout, "A_TERNARY\n");
+      return;
+    case A_XOR:
+      fprintf(stdout, "A_XOR\n");
+      return;
     default:
       fatald("Unknown dumpAST operator", n->op);
   }

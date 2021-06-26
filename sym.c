@@ -35,7 +35,10 @@ struct symtable *newsym(char *name, int type, struct symtable *ctype,
   if (node == NULL)
     fatal("Unable to malloc a symtable node in newsym");
 
-  node->name = strdup(name);
+  if (name == NULL)
+    node->name = NULL;
+  else
+    node->name = strdup(name);
   node->type = type;
   node->ctype = ctype;
   node->stype = stype;

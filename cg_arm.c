@@ -59,7 +59,7 @@ static int alloc_register(void) {
 }
 
 // Frees up a previously allocated register.
-static void free_register(int reg) {
+static void cgfreereg(int reg) {
   if (freereg[reg] != 0) {
     fprintf(stderr, "Error trying to free register %d\n", reg);
     exit(1);
@@ -188,7 +188,7 @@ int cgloadint(int value, int type) {
 int cgadd(int r1, int r2) {
   // e.g. add r2, r1, r2
   fprintf(Outfile, "\tadd\t%s, %s, %s\n", reglist[r2], reglist[r1], reglist[r2]);
-  free_register(r1);
+  cgfreereg(r1);
 
   return r2;
 }
@@ -198,7 +198,7 @@ int cgadd(int r1, int r2) {
 int cgmul(int r1, int r2) {
   // e.g. mul r2, r1, r2
   fprintf(Outfile, "\tmul\t%s, %s, %s\n", reglist[r2], reglist[r1], reglist[r2]);
-  free_register(r1);
+  cgfreereg(r1);
 
   return r2;
 }
@@ -208,7 +208,7 @@ int cgmul(int r1, int r2) {
 int cgsub(int r1, int r2) {
   // e.g. sub r2, r1, r2
   fprintf(Outfile, "\tsub\t%s, %s, %s\n", reglist[r2], reglist[r1], reglist[r2]);
-  free_register(r2);
+  cgfreereg(r2);
 
   return r1;
 }
@@ -229,7 +229,7 @@ int cgdivmod(int r1, int r2) {
   fprintf(Outfile, "\tbl\t__aeabi_idiv\n");
   fprintf(Outfile, "\tmov\t%s, r0\n", reglist[r1]);
 
-  free_register(r2);
+  cgfreereg(r2);
 
   return r1;
 }
@@ -240,7 +240,7 @@ void cgprintint(int r) {
   // Linux x86-64 expects the first argument to be in %rdi
   fprintf(Outfile, "\tmovq\t%s, %%rdi\n", reglist[r]);
   fprintf(Outfile, "\tcall\tprintint\n");
-  free_register(r);
+  cgfreereg(r);
 }
 
 int cgloadglob(int id) {
@@ -326,7 +326,7 @@ int cgcompare_and_set(int ASTop, int r1, int r2) {
   // uxtb r2, r2
   fprintf(Outfile, "\tuxtb\t%s, %s\n", reglist[r2], reglist[r2]);
 
-  free_register(r1);
+  cgfreereg(r1);
   return r2;
 }
 

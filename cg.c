@@ -101,7 +101,7 @@ int alloc_register(void) {
 }
 
 // Frees up a previously allocated register.
-static void free_register(int reg) {
+void cgfreereg(int reg) {
   if (freereg[reg] != 0) {
     fatald("Error trying to free register", reg);
   }
@@ -246,7 +246,7 @@ int cgloadint(int value, int type) {
 int cgadd(int r1, int r2) {
   // e.g. addq %r8, %r9
   fprintf(Outfile, "\taddq\t%s, %s\n", reglist[r2], reglist[r1]);
-  free_register(r2);
+  cgfreereg(r2);
 
   return r1;
 }
@@ -256,7 +256,7 @@ int cgadd(int r1, int r2) {
 int cgmul(int r1, int r2) {
   // e.g. imulq %r8, %r9
   fprintf(Outfile, "\timulq\t%s, %s\n", reglist[r2], reglist[r1]);
-  free_register(r2);
+  cgfreereg(r2);
 
   return r1;
 }
@@ -266,7 +266,7 @@ int cgmul(int r1, int r2) {
 int cgsub(int r1, int r2) {
   // e.g. subq %r2, %r1
   fprintf(Outfile, "\tsubq\t%s, %s\n", reglist[r2], reglist[r1]);
-  free_register(r2);
+  cgfreereg(r2);
 
   return r1;
 }
@@ -294,7 +294,7 @@ int cgdivmod(int r1, int r2, int op) {
   else
     fprintf(Outfile, "\tmovq\t%%rdx,%s\n", reglist[r1]);
 
-  free_register(r2);
+  cgfreereg(r2);
 
   return r1;
 }
@@ -305,7 +305,7 @@ void cgprintint(int r) {
   // Linux x86-64 expects the first argument to be in %rdi
   fprintf(Outfile, "\tmovq\t%s, %%rdi\n", reglist[r]);
   fprintf(Outfile, "\tcall\tprintint\n");
-  free_register(r);
+  cgfreereg(r);
 }
 
 int cgstorglob(int r, struct symtable *sym) {
@@ -414,7 +414,7 @@ int cgcompare_and_set(int ASTop, int r1, int r2, int type) {
   // a 64-bit register
   fprintf(Outfile, "\tmovzbq\t%s, %s\n", breglist[r2], reglist[r2]);
 
-  free_register(r1);
+  cgfreereg(r1);
   return r2;
 }
 
@@ -448,7 +448,8 @@ int cgcompare_and_jump(int ASTop, int r1, int r2, int label, int type) {
 
   // jne L1
   fprintf(Outfile, "\t%s\tL%d\n", invcmplist[ASTop - A_EQ], label);
-  freeall_registers(NOREG);
+  cgfreereg(r1);
+  cgfreereg(r2);
   return NOREG;
 }
 
@@ -612,21 +613,21 @@ int cgloadglobstr(int label) {
 int cgand(int r1, int r2) {
   // andq %r9, %r10
   fprintf(Outfile, "\tandq\t%s, %s\n", reglist[r2], reglist[r1]);
-  free_register(r2);
+  cgfreereg(r2);
   return r1;
 }
 
 int cgor(int r1, int r2) {
   // orq %r9, %r10
   fprintf(Outfile, "\torq\t%s, %s\n", reglist[r2], reglist[r1]);
-  free_register(r2);
+  cgfreereg(r2);
   return r1;
 }
 
 int cgxor(int r1, int r2) {
   // xorq %r9, %r10
   fprintf(Outfile, "\txorq\t%s, %s\n", reglist[r2], reglist[r1]);
-  free_register(r2);
+  cgfreereg(r2);
   return r1;
 }
 
@@ -649,7 +650,7 @@ int cgshl(int r1, int r2) {
   fprintf(Outfile, "\tmovb\t%s, %%cl\n", breglist[r2]);
   fprintf(Outfile, "\tshlq\t%%cl, %s\n", reglist[r1]);
 
-  free_register(r2);
+  cgfreereg(r2);
   return r1;
 }
 
@@ -658,7 +659,7 @@ int cgshr(int r1, int r2) {
   fprintf(Outfile, "\tmovb\t%s, %%cl\n", breglist[r2]);
   fprintf(Outfile, "\tshrq\t%%cl, %s\n", reglist[r1]);
 
-  free_register(r2);
+  cgfreereg(r2);
   return r1;
 }
 
@@ -732,7 +733,7 @@ void cgcopyarg(int r, int argposn) {
     // movq %r10, %rdi
     fprintf(Outfile, "\tmovq\t%s, %s\n", reglist[r], reglist[FIRSTPARAMREG - argposn + 1]);
   }
-  free_register(r);
+  cgfreereg(r);
 }
 
 // Given a scalar type, an existing memory offset (which
@@ -886,7 +887,7 @@ int cgloadvar(struct symtable *sym, int op) {
         break;
     }
     // and free the register
-    free_register(postreg);
+    cgfreereg(postreg);
   }
 
   // Return the register with the value

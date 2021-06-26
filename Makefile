@@ -27,12 +27,24 @@ clean:
 test: ccc tests/runtests
 	(cd tests; chmod +x runtests; ./runtests)
 
+# Run the tests with the
+# compiler that compiled itself
+test0: install tests/runtests0 ccc0
+	(cd tests; chmod +x runtests0; ./runtests0)
+
 armtest: cccarm tests/runtests
 	(cd tests; chmod +x runtests; ./runtests)
 
 # Try to do the triple test
 triple: ccc1
 	size ccc[01]
+
+# Paranoid: quadruple test
+quad: ccc2
+	size ccc[012]
+
+ccc2: ccc1 $(SRCS)
+	./ccc1 -o ccc2 $(SRCS)
 
 ccc1: ccc0 $(SRCS)
 	./ccc0 -o ccc1 $(SRCS)
