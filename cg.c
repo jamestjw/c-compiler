@@ -745,17 +745,12 @@ int cgalign(int type, int offset, int direction) {
 
   switch (type) {
     case P_CHAR:
-      return offset;
-    case P_INT:
-    case P_LONG:
       break;
     default:
-      if (!ptrtype(type))
-        fatald("Bad type in cg_align", type);
+      // Align whatever we have now on a 4-byte alignment.
+      alignment = 4;
+      offset = (offset + direction * (alignment - 1)) & ~(alignment - 1);
   }
-
-  alignment = 4;
-  offset = (offset + direction * (alignment - 1)) & ~(alignment - 1);
 
   return offset;
 }
